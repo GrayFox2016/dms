@@ -1,0 +1,205 @@
+<div ng-controller="MainCtrl">
+	<div class="container-fluid">
+
+		<div class="row-fluid">
+
+			<div class="widget-box">
+				<div class="widget-title">
+					<span class="icon"><i class="icon-info"></i></span>
+					<h5>Container List - {{params.appName}} - {{params.appDes}}</h5>
+					<div class="actions">
+						<button class="btn" ng-click="back()">Back</button>
+					</div>
+				</div>
+				<div class="widget-content">
+					<ul class="nav nav-tabs" ui-tabs="{beforeFn: 'changeTab', targetIndex: tmp.targetIndex}">
+						<li class="active"><a>Container List</a></li>
+						<li><a>Event List</a></li>
+						<li><a>Application Change History</a></li>
+					</ul>
+					<div class="tabs active">
+						<p class="bg-info">Last Refreshed: {{tmp.refreshTime|date:'yyyy/MM/dd HH:mm:ss'}}</p>
+						<table class="table table-bordered table-striped">
+							<tr>
+								<th width="10%">Node Ip</th>
+								<th width="25%">Image</th>
+								<th width="20%">Command</th>
+								<th width="10%">State</th>
+								<th width="10%">Status</th>
+								<th></th>
+							</tr>
+							<tr ng-repeat="x in ll">
+								<td>
+									{{x.Node_Ip}}
+									<br />
+									<p class="bg-info">Instance Index: {{x.Instance_Index}}</p>
+								</td>
+								<td>{{x.Image}}</td>
+								<td>{{x.Command}}</td>
+								<td>
+									<p
+										ng-class="{'bg-info': 'running' == x.State, 'bg-success': 'created' == x.State, 'bg-danger': 'exited' == x.State}">
+										{{x.State}}</p>
+								</td>
+								<td>{{x.Status}}</td>
+								<td class="opts">
+									<button class="btn" ng-click="inspect(x)">Inspect</button>
+									<button class="btn" ng-show="'running' == x.State"
+										ng-click="opt(x, 'stop')">Stop</button>
+									<button class="btn" ng-show="'running' == x.State"
+										ng-click="opt(x, 'kill')">Kill</button>
+									<button class="btn" ng-show="'created' == x.State || 'exited' == x.State"
+										ng-click="opt(x, 'start')">Start</button>
+									<button class="btn" ng-show="'created' == x.State || 'exited' == x.State"
+										ng-click="opt(x, 'remove')">Remove</button>
+									<br />
+									<button class="btn" ng-click="showBindList(x)">Volume Binds</button>
+									<button class="btn" ng-click="showPortBind(x)">Port Binds</button>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<div class="tabs">
+						<div class="form-group">
+							<label>reason: </label>
+							<select ng-model="tmp.reason" ng-options="a.reason as a.reason for a in tmp.reasonList"
+								style="width: 200px;" ng-change="queryEventLl()">
+								<option value="" selected>--/--</option>
+							</select>
+						</div>
+						<table class="table table-bordered table-striped">
+							<tr>
+								<th width="10%">type</th>
+								<th width="10%">reason</th>
+								<th width="10%">result</th>
+								<th width="50%">message</th>
+								<th width="20%">created date</th>
+							</tr>
+							<tr ng-repeat="one in eventLl">
+								<td>{{one.type}}</td>
+								<td>{{one.reason}}</td>
+								<td>{{one.result}}</td>
+								<td>
+									<p class="bg-info" style="text-align: left;">{{one.message}}</p>
+								</td>
+								<td>{{one.createdDate|date:'yyyy/MM/dd HH:mm:ss'}}</td>
+							</tr>
+						</table>
+						<div style="margin-top: 6px;" ui-pagi="" pager="eventPager"
+							on-change-page="queryEventLl(cp, event)">
+						</div>
+					</div>
+					<div class="tabs">
+						<p class="bg-info">Last Refreshed: {{tmp.refreshTime|date:'yyyy/MM/dd HH:mm:ss'}}</p>
+						<table class="table table-bordered table-striped">
+							<tr>
+								<th width="10%">job type</th>
+								<th width="20%">params</th>
+								<th width="10%">status</th>
+								<th width="10%">fail num</th>
+								<th width="10%">created date</th>
+								<th width="10%">updated date</th>
+								<th></th>
+							</tr>
+							<tr ng-repeat="one in jobList">
+								<td>
+									<p
+										ng-class="{'bg-success': one.jobType == 1, 'bg-danger': one.jobType == 2, 'bg-info': one.jobType == 3}">
+										{{getJobTypeLabel(one.jobType)}}</p>
+								</td>
+								<td>{{one.params}}</td>
+								<td>
+									<p
+										ng-class="{'bg-success': one.status == 10, 'bg-danger': one.status == -1, 'bg-info': one.status == 1 || one.status == 0}">
+										{{getJobStatusLabel(one.status)}}</p>
+								</td>
+								<td>{{one.failNum}}</td>
+								<!-- <td>{{one.createdDate|date:'yyyy/MM/dd HH:mm:ss'}}</td>
+								<td>{{one.updatedDate|date:'yyyy/MM/dd HH:mm:ss'}}</td> -->
+								<td>{{one.createdDate|timeAgo}}</td>
+								<td>{{one.updatedDate|timeAgo}}</td>
+								<td>
+									<button class="btn" ng-click="showMessage(one)">Show Message</button>
+									<button class="btn" ng-click="showJobLogList(one)">Show Log List</button>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+			</div>
+
+
+		</div><!-- /.row-fluid -->
+	</div>
+
+	<script type="text/x-template"
+		ui-dialog="{showModel: 'ctrl.isShowJobLog', title: 'Job Log List', dialogId: 'dialogJobLog', lock: true, fixPosition: true, fixed: true, ext: {max: false}}">
+
+		<div style="height: 600px; overflow-y: auto;">
+<p class="bg-info">Last Refreshed: {{tmp.refreshTime|date:'yyyy/MM/dd HH:mm:ss'}}</p>
+<table class="table table-bordered table-striped" style="width: 1200px;">
+	<tr>
+		<th width="10%">instance index</th>
+		<th width="80%">message</th>
+		<th width="10%">created date</th>
+	</tr>
+	<tr ng-repeat="one in tmp.jobLogList">
+		<td>{{one.instanceIndex}}</td>
+		<td>
+			<table class="table table-bordered table-striped">
+				<tr>
+					<th width="10%">step</th>
+					<th width="10%">is ok</th>
+					<th width="10%">node ip</th>
+					<th width="50%">message</th>
+					<th width="20%">created date</th>
+				</tr>
+				<tr ng-repeat="x in one.messageList">
+					<td>{{x.step}}</td>
+					<td><p ng-class="{'bg-success': x.isOk, 'bg-danger': !x.isOk}">{{x.isOk}}</p></td>
+					<td>{{x.nodeIp}}</td>
+					<td><p style="max-width: 700px; background-color: #d9edf7; text-align: left;">{{x.message}}<p></td>
+					<!-- <td>{{x.createdDate|date:'yyyy/MM/dd HH:mm:ss'}}</td> -->
+					<td>{{x.createdDate|timeAgo}}</td>
+				</tr>
+			</table>
+		</td>
+		<!-- <td>{{one.createdDate|date:'yyyy/MM/dd HH:mm:ss'}}</td> -->
+		<td>{{one.createdDate|timeAgo}}</td>
+	</tr>
+</table>
+</div>
+</script>
+
+	<script type="text/x-template"
+		ui-dialog="{showModel: 'ctrl.isShowBinds', title: 'Binds', dialogId: 'dialogBinds', lock: true, fixPosition: true, fixed: true, ext: {max: false}}">
+
+<p class="bg-info">Container Id: {{tmp.containerId}}</p>
+<table class="table table-bordered table-striped" style="width: 1200px;">
+<tr>
+<th width="30%">container mount path</th>
+<th width="30%">host path</th>
+<th width="10%">mode</th>
+<th width="10%">file type</th>
+<th width="10%">usage</th>
+<th width=""></th>
+</tr>
+<tr ng-repeat="one in tmp.bindList">
+<td>{{one.containerDir}}</td>
+<td>{{one.hostDir}}</td>
+<td>{{one.mode}}</td>
+<td>{{one.fileType}}</td>
+<td>
+	<ul ng-show="one.fileType == 'dir'">
+		<li><span>files&nbsp;</span><span class="bg-info">{{one.dirUsage.files}}</span></li>
+		<li><span>disk usage MB&nbsp;</span><span class="bg-info">{{one.dirUsage.diskUsageMB}}</span></li>
+	</ul>
+</td>
+<td>
+	<button class="btn" ng-click="showBindContent($index)">View Detail</button>	
+</td>
+</tr>
+</table>
+</script>
+
+</div>

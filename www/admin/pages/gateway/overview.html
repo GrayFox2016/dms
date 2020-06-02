@@ -1,0 +1,65 @@
+<div ng-controller="MainCtrl">
+
+	<div class="container-fluid">
+
+		<div class="row-fluid">
+
+			<div class="widget-box">
+				<div class="widget-title">
+					<span class="icon"><i class="icon-info"></i></span>
+					<h5>Gateway Overview</h5>
+				</div>
+				<div class="widget-content">
+					<div class="form-group">
+						<label>Cluster: </label>
+						<select ng-model="tmp.clusterId" ng-options="a.id as a.name for a in clusterList"
+							style="width: 80px;" ng-change="onClusterChoose()">
+							<option value="" selected>--/--</option>
+						</select>
+					</div>
+
+
+					<table class="table table-bordered table-striped">
+						<tr ng-repeat="one in list">
+							<td width="20%">
+								<p class="bg-tips">Frontend Id: {{one.id}}/Frontend Name: {{one.name}}</p>
+								<p style="text-align: center;">{{one.des}}</p>
+							</td>
+							<td width="20%">
+								<table class="table table-bordered table-striped">
+									<tr>
+										<th width="30%">type</th>
+										<th width="70%">rule</th>
+									</tr>
+									<tr ng-repeat="x in one.conf.ruleConfList">
+										<td>
+											<p class="bg-info">{{x.type}}</p>
+										</td>
+										<td>{{x.rule}}</td>
+									</tr>
+								</table>
+							</td>
+							<td>
+								<table class="table table-bordered table-striped">
+									<tr>
+										<th width="30%">weight</th>
+										<th width="70%">url</th>
+									</tr>
+									<tr ng-repeat="x in one.backend.serverList">
+										<td>
+											<p class="bg-info">{{x.weight}}</p>
+										</td>
+										<td>{{x.url}}</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+		</div><!-- /.row-fluid -->
+
+	</div>
+
+</div>
