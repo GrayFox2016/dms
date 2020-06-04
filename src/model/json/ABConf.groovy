@@ -9,6 +9,8 @@ class ABConf implements JSONFiled {
 
     String image
 
+    String tag
+
     Integer weight
 
     boolean asBoolean() {

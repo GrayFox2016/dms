@@ -201,22 +201,18 @@ class Guardian extends IntervalJob {
                 }
 
                 // check gateway
-                def operator = new GatewayOperator(gatewayConf)
-                List<String> readyServerUrlList = []
-                for (x in list) {
+                def operator = GatewayOperator.create(app.id, gatewayConf)
+                List<String> runningServerUrlList = list.collect { x ->
                     def nodeIpDockerHost = ContainerHelper.getNodeIpDockerHost(x)
                     def publicPort = ContainerHelper.getPublicPort(gatewayConf.containerPrivatePort, x)
-                    if (operator.isBackendReady(nodeIpDockerHost, publicPort)) {
-                        readyServerUrlList << GatewayOperator.scheme(nodeIpDockerHost, publicPort)
-                    }
+                    GatewayOperator.scheme(nodeIpDockerHost, publicPort)
                 }
-
-                List<String> backendServerUrlList = operator.getBackendServerUrlList()
-                (backendServerUrlList - readyServerUrlList).each {
+                List<String> backendServerUrlList = operator.getBackendServerUrlListFromApi()
+                (backendServerUrlList - runningServerUrlList).each {
                     operator.removeBackend(it)
                 }
-                (readyServerUrlList - backendServerUrlList).each {
-                    operator.addBackend(it)
+                (runningServerUrlList - backendServerUrlList).each {
+                    operator.addBackend(it, false)
                 }
                 return true
             } else {

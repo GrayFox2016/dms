@@ -359,7 +359,16 @@ $(function () {
             }
             return true;
         }, 'eg. http://127.0.0.1:80');
-
+        uiValid.regPat('imageWithGroup', function (val) {
+            if (val.indexOf('/') == -1) {
+                return false;
+            }
+            var arr2 = val.split('/');
+            if (arr2.length != 2) {
+                return false;
+            }
+            return true;
+        }, 'eg. library/nginx');
     }]);
     md.factory('responseLoginFilter', ['$q', 'uiTips', function ($q, uiTips) {
         var responseLoginFilter = {
@@ -496,14 +505,20 @@ $(function () {
                             data: val.xData
                         }], yAxis: [{
                             type: 'value',
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#17273B',
+                                    width: 1,
+                                    type: 'solid'
+                                }
+                            },
                             axisLabel: {
                                 show: true,
                                 color: 'white',
                                 fontSize: 12
                             },
-                            axisLine: {
-                                show: false
-                            },
+                            splitNumber: 10,
                             splitLine: {
                                 show: true,
                                 lineStyle: {

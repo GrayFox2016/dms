@@ -43,9 +43,34 @@ h.group('/gw/cluster') {
         def clusterId = req.param('clusterId')
         assert clusterId
 
+        def cid = clusterId as int
+        def r = GatewayOperator.create(cid + 20000).getBackendListFromApi(cid)
+
         def list = new GwFrontendDTO(clusterId: clusterId as int).loadList() as List<GwFrontendDTO>
         list.collect {
-            [id: it.id, name: it.name, des: it.des, conf: it.conf, backend: it.backend]
+            def apiBackendList = r[it.id]
+            def serverList = it.backend.serverList
+            serverList.each { server ->
+                def one = apiBackendList.find { t -> t.url == server.url }
+                if (!one) {
+                    server.url += ' - !!! not found from api'
+                } else {
+                    if (one.weight != server.weight) {
+                        server.url += (' - !!! weight api - ' + one.weight)
+                    }
+                }
+            }
+            apiBackendList.each { server ->
+                def one = serverList.find { t -> t.url == server.url }
+                if (!one) {
+                    server.url += ' - !!! not found from local config'
+                } else {
+                    if (one.weight != server.weight) {
+                        server.url += (' - !!! weight local - ' + one.weight)
+                    }
+                }
+            }
+            [id: it.id, name: it.name, des: it.des, conf: it.conf, serverList: serverList, apiBackendList: apiBackendList]
         }
     }
 }
@@ -78,14 +103,15 @@ h.group('/gw/frontend') {
         def one = req.bodyAs(GwFrontendDTO)
         assert one.name && one.clusterId
         one.updatedDate = new Date()
+
         if (one.id) {
             one.update()
-            GatewayOperator.updateFrontend(one)
+            GatewayOperator.create(one.id + 10000).updateFrontend(one)
             return [id: one.id]
         } else {
             def id = one.add()
             one.id = id
-            GatewayOperator.updateFrontend(one)
+            GatewayOperator.create(one.id + 10000).updateFrontend(one)
             return [id: id]
         }
     }

@@ -19,9 +19,9 @@
 				<table class="table table-bordered table-striped">
 					<tr>
 						<th width="10%">id</th>
-						<th width="20%">image name</th>
+						<th width="10%">image name</th>
 						<th width="10%">name/des/type</th>
-						<th width="30%">content/params</th>
+						<th width="40%">content/params</th>
 						<th width="10%">mount dist</th>
 						<th width="10%">updated date</th>
 						<th></th>
@@ -30,12 +30,12 @@
 						<td>{{one.id}}</td>
 						<td>{{one.imageName}}</td>
 						<td>
-							<div>{{one.name}}</div>
-							<div>{{one.des}}</div>
-							<div>{{one.tplType}}</div>
+							<p class="bg-info">{{one.name}}</p>
+							<p>{{one.des}}</p>
+							<p>{{one.tplType}}</p>
 						</td>
 						<td>
-							<pre>{{one.content}}</pre>
+							<pre style="height: 200px;">{{one.content}}</pre>
 							<div>
 								<ul>
 									<li ng-repeat="param in one.params.paramList">{{param.name}}/{{param.type}}/{{param.defaultValue}}</li>
@@ -73,7 +73,7 @@
 	<tr>
 		<td>Image Name</td>
 		<td>
-			<input type="text" ng-model="editOne.imageName" ui-valid="r" />
+			<input type="text" ng-model="editOne.imageName" ui-valid="r imageWithGroup" />
 		</td>
 	</tr>	
 	<tr>

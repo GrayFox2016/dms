@@ -225,9 +225,7 @@ class Agent extends IntervalJob {
             return true
         }
 
-        if (conf.isScaleAuto && conf.isScaleDependOnCpuPerc) {
-            collector.collect(container.id(), appId, conf.cpuPerc)
-        }
+        collector.collect(container.id(), appId, instanceIndex, conf)
 
         try {
             String bodyMetric
@@ -283,7 +281,7 @@ class Agent extends IntervalJob {
                 Map r = CachedGroovyClassLoader.instance.eval(conf.metricFormatScriptContent, variables) as Map
                 if (r) {
                     gauges = r
-                    AgentTempInfoHolder.instance.addMetric(appId, instanceIndex, gauges, bodyMetric)
+                    AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 } else {
                     addEvent Event.builder().type(Event.Type.node).reason('metric get fail').result('' + appId).
                             build().log('metric body format - ' + conf.metricFormatScriptContent)
@@ -292,7 +290,7 @@ class Agent extends IntervalJob {
             } else {
                 if (bodyMetric.startsWith('{')) {
                     gauges = JSON.parseObject(bodyMetric)
-                    AgentTempInfoHolder.instance.addMetric(appId, instanceIndex, gauges, bodyMetric)
+                    AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 } else {
                     gauges = [:]
                     bodyMetric.readLines().each {
@@ -301,7 +299,7 @@ class Agent extends IntervalJob {
                             gauges[arr[0]] = arr[1]
                         }
                     }
-                    AgentTempInfoHolder.instance.addMetric(appId, instanceIndex, gauges, bodyMetric)
+                    AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 }
             }
 

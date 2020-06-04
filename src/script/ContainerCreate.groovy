@@ -14,7 +14,6 @@ import model.json.PortMapping
 import org.apache.commons.io.FileUtils
 import org.segment.d.json.JsonReader
 import org.segment.web.common.CachedGroovyClassLoader
-import org.slf4j.LoggerFactory
 import server.scheduler.CreateContainerConf
 
 import static common.ContainerHelper.*
@@ -29,7 +28,6 @@ if (!jsonStr) {
 
 def createConf = JsonReader.instance.read(jsonStr, CreateContainerConf)
 def conf = createConf.conf
-def log = LoggerFactory.getLogger(this.getClass())
 
 def hostConfigB = HostConfig.builder()
 if (conf.isPrivileged) {
@@ -37,9 +35,13 @@ if (conf.isPrivileged) {
 }
 
 def envList = conf.envList.findAll { it.key }
+createConf.globalEnvConf.envList.each {
+    envList << it
+}
 envList << new KVPair(key: KEY_APP_ID, value: createConf.appId)
 envList << new KVPair(key: KEY_CLUSTER_ID, value: createConf.clusterId)
 envList << new KVPair(key: KEY_NODE_IP, value: createConf.nodeIp)
+envList << new KVPair(key: KEY_NODE_IP_DOCKER_HOST, value: createConf.nodeIpDockerHost)
 envList << new KVPair(key: KEY_INSTANCE_INDEX, value: createConf.instanceIndex)
 
 int vCpuNumber
@@ -106,14 +108,17 @@ String tplConfFileDir = Conf.isWindows() ? 'userHome/volume' :
         Conf.instance.getString('tplConfFileDir', '/opt/config')
 conf.fileVolumeList.eachWithIndex { FileVolumeMount one, int i ->
     def content = Agent.instance.post('/dms/api/container/create/tpl',
-            [clusterId      : createConf.clusterId,
-             appId          : createConf.appId,
-             appIdList      : createConf.appIdList,
-             nodeIp         : createConf.nodeIp,
-             nodeIpList     : createConf.nodeIpList,
-             instanceIndex  : createConf.instanceIndex,
-             containerNumber: conf.containerNumber,
-             imageTplId     : one.imageTplId], String)
+            [clusterId           : createConf.clusterId,
+             appId               : createConf.appId,
+             appIdList           : createConf.appIdList,
+             nodeIp              : createConf.nodeIp,
+             nodeIpDockerHost    : createConf.nodeIpDockerHost,
+             nodeIpList          : createConf.nodeIpList,
+             nodeIpDockerHostList: createConf.nodeIpDockerHostList,
+             instanceIndex       : createConf.instanceIndex,
+             containerNumber     : conf.containerNumber,
+             allAppLogDir        : createConf.globalEnvConf.allAppLogDir,
+             imageTplId          : one.imageTplId], String)
 
     if (one.isParentDirMount == 1) {
         String fileLocal = Conf.isWindows() ? one.dist.replace('/c/Users/', 'C:/Users/') : one.dist
@@ -208,7 +213,9 @@ if (conf.cmd) {
             cmd << it.toString()
         }
     } else {
-        cmd = ["sh", "-c", conf.cmd]
+        cmd << "sh"
+        cmd << "-c"
+        cmd << conf.cmd
     }
     b.cmd(cmd)
 }

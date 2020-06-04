@@ -34,7 +34,10 @@ if (Conf.isWindows()) {
     // boot2docker virtual box ip
     agent.nodeIpDockerHost = '192.168.99.100'
 }
-agent.nodeIp = c.getString('agentNodeIp', Utils.localIp())
+agent.nodeIp = Utils.localIp()
+if (!agent.nodeIpDockerHost) {
+    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', agent.nodeIp)
+}
 agent.docker = DefaultDockerClient.fromEnv().uri(c.getString('dockerHostUri', 'https://192.168.99.100:2376')).build()
 agent.start()
 

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
 import common.ContainerHelper
 import common.Utils
+import model.AppDTO
 import model.NodeDTO
 import org.segment.web.handler.ChainHandler
 import server.AgentCaller
@@ -82,8 +83,23 @@ h.group('/node') {
     }.get('/metric/queue') { req, resp ->
         def nodeIp = req.param('nodeIp')
         def type = req.param('type')
+        def queueType = req.param('queueType')
+        def containerId = req.param('containerId')
         assert nodeIp && type
-        resp.end AgentCaller.instance.get(nodeIp, '/dmc/metric/queue', [type: type])
+
+        def p = [type: type, queueType: queueType, containerId: containerId]
+        if (containerId) {
+            def appId = InMemoryAllContainerManager.instance.getAppIpByContainerId(containerId)
+            p.appId = appId
+            if ('container' == queueType) {
+                def appOne = new AppDTO(id: appId).one() as AppDTO
+                if (!appOne.monitorConf) {
+                    resp.halt(500, 'this app is not config monitor')
+                }
+            }
+        }
+
+        resp.end AgentCaller.instance.get(nodeIp, '/dmc/metric/queue', p)
     }
 }
 

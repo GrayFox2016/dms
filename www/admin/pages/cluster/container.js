@@ -82,6 +82,7 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
     };
 
     $scope.opt = function (x, cmd) {
+        uiTips.loading();
         $http.get('/dms/container/manage/' + cmd, { params: { id: x.Id } }).success(function (data) {
             uiTips.tips(JSON.stringify(data));
             $scope.queryLl();
@@ -113,8 +114,8 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
     $scope.showPortBind = function (x) {
         $http.get('/dms/container/manage/port/bind', { params: { id: x.Id } }).success(function (data) {
             $.dialog({
-                title: 'Port Binds - ',
-                content: '<pre style="height: 300px;">' + JSON.stringify(data, null, 2) + '</pre>'
+                title: 'Port Binds',
+                content: '<pre style="height: 400px;">' + JSON.stringify(data, null, 2) + '</pre>'
             });
         });
     };
@@ -151,6 +152,8 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
     $scope.refreshList = function () {
         if ($scope.ctrl.isShowJobLog) {
             $scope.showJobLogList();
+        } else if ($scope.ctrl.isShowContainerStats) {
+            $scope.changeContainerStatsTab(statsTabIndexChoosed);
         }
 
         if (tabIndexChoosed == 2) {
@@ -162,5 +165,52 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
             $scope.queryLl();
             $scope.tmp.refreshTime = new Date();
         }
+    };
+
+    $scope.showStats = function (one) {
+        $http.get('/dms/node/metric/queue', {
+            params: {
+                nodeIp: one.Node_Ip,
+                containerId: one.Id,
+                queueType: 'container',
+                type: 'cpu'
+            }
+        }).success(function (data) {
+            $scope.tmp.targetContainer = one;
+            $scope.tmp.containerCpuChartData = { data: data.list, xData: data.timelineList };
+            $scope.ctrl.isShowContainerStats = true;
+            Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+        });
+    };
+
+    var statsTabIndexChoosed;
+    $scope.changeContainerStatsTab = function (index, triggerIndex) {
+        statsTabIndexChoosed = index;
+        if (index == 0) {
+            $http.get('/dms/node/metric/queue', {
+                params: {
+                    nodeIp: $scope.tmp.targetContainer.Node_Ip,
+                    containerId: $scope.tmp.targetContainer.Id,
+                    queueType: 'container',
+                    type: 'cpu'
+                }
+            }).success(function (data) {
+                $scope.tmp.containerCpuChartData = { data: data.list, xData: data.timelineList };
+                Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+            });
+        } else if (index == 1) {
+            $http.get('/dms/node/metric/queue', {
+                params: {
+                    nodeIp: $scope.tmp.targetContainer.Node_Ip,
+                    containerId: $scope.tmp.targetContainer.Id,
+                    queueType: 'container',
+                    type: 'mem'
+                }
+            }).success(function (data) {
+                $scope.tmp.containerMemChartData = { data: data.list, xData: data.timelineList };
+                Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+            });
+        }
+        return true;
     };
 });

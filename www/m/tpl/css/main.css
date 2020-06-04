@@ -606,7 +606,9 @@ select {
 
 .table th {
 	font-size: 14px;
-	font-weight: normal;
+	font-weight: bold;
+	background-color: #1f4681 !important;
+    color: white;
 }
 
 .table .block{

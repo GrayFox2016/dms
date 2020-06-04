@@ -150,7 +150,7 @@ class InMemoryAllContainerManager extends IntervalJob implements AllContainerMan
             }
         }
 
-        r.findAll { x ->
+        def list = r.findAll { x ->
             def appIdTarget = ContainerHelper.getAppId(x)
             if (appId && appIdTarget != appId) {
                 return false
@@ -162,6 +162,31 @@ class InMemoryAllContainerManager extends IntervalJob implements AllContainerMan
                 return false
             }
             true
+        }
+        list.sort { x, y ->
+            def appIdX = ContainerHelper.getAppId(x)
+            def appIdY = ContainerHelper.getAppId(y)
+            if (appIdX == appIdY) {
+                def instanceIndexX = ContainerHelper.getAppInstanceIndex(x)
+                def instanceIndexY = ContainerHelper.getAppInstanceIndex(y)
+                if (instanceIndexX == instanceIndexY) {
+                    return 0
+                } else {
+                    if (instanceIndexX == null) {
+                        return -1
+                    } else if (instanceIndexY == null) {
+                        return 1
+                    } else {
+                        return instanceIndexX - instanceIndexY;
+                    }
+                }
+            } else {
+                if (appIdX == null) {
+                    return -1
+                } else {
+                    return 1
+                }
+            }
         }
     }
 }

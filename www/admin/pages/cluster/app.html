@@ -20,7 +20,7 @@
 						</select>
 						<label>Namespace: </label>
 						<select ng-model="tmp.namespaceId" ng-options="a.id as a.name for a in tmp.namespaceList"
-							style="width: 80px;">
+							style="width: 80px;" ng-change="queryLl()">
 							<option value="" selected>--/--</option>
 						</select>
 						<input type="text" ng-model="tmp.keyword" placeholder="Input Keyword" />
@@ -234,6 +234,12 @@
 				<td width="30%">image</td>
 				<td>
 					<input type="text" ng-model="confOne.abConf.image" style="width: 200px;" />
+				</td>
+			</tr>
+			<tr>
+				<td width="30%">tag</td>
+				<td>
+					<input type="text" ng-model="confOne.abConf.tag" style="width: 200px;" />
 				</td>
 			</tr>
 			<tr>

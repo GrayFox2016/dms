@@ -1,6 +1,11 @@
 package server.gateway
 
+import com.alibaba.fastjson.JSON
+import com.alibaba.fastjson.JSONObject
 import com.github.kevinsawicki.http.HttpRequest
+import com.github.zkclient.ZkClient
+import com.github.zkclient.exception.ZkNoNodeException
+import common.Conf
 import common.Event
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -12,13 +17,33 @@ import model.json.GwFrontendRuleConf
 import model.json.KVPair
 import server.scheduler.ContainerRunResult
 
+import java.util.concurrent.ConcurrentHashMap
+
 @CompileStatic
 @Slf4j
 class GatewayOperator {
     private GatewayConf conf
 
-    GatewayOperator(GatewayConf conf) {
+    private GatewayOperator(GatewayConf conf) {
         this.conf = conf
+    }
+
+    private static ConcurrentHashMap<Integer, GatewayOperator> cached = new ConcurrentHashMap<>();
+
+    static GatewayOperator create(Integer appId, GatewayConf conf = null) {
+        def x = cached[appId]
+        if (x) {
+            x.conf = conf
+            return x
+        }
+
+        def one = new GatewayOperator(conf)
+        def old = cached.putIfAbsent(appId, one)
+        if (old) {
+            old.conf = conf
+            return old
+        }
+        one
     }
 
     static final int DEFAULT_WEIGHT = 10
@@ -29,12 +54,87 @@ class GatewayOperator {
 
     List<String> getBackendServerUrlList() {
         def frontend = new GwFrontendDTO(id: conf.frontendId).one() as GwFrontendDTO
-        frontend.backend.serverList.collect {
+        def r = frontend.backend.serverList.collect {
             it.url
         }
+        r.sort()
     }
 
-    private boolean changeBackend(String serverUrl, boolean isAdd = true, int weight = DEFAULT_WEIGHT) {
+    Map<Integer, List<GwBackendServer>> getBackendListFromApi(int clusterId) {
+        def one = new GwClusterDTO(id: clusterId).one() as GwClusterDTO
+        def serverUrl = one.serverUrl + ':' + one.dashboardPort
+
+        Map<Integer, List<GwBackendServer>> r = [:]
+        def body = HttpRequest.get(serverUrl + '/api').connectTimeout(500).readTimeout(1000).body()
+        def obj = JSON.parseObject(body)
+        def zk = obj.getJSONObject('zk')
+        if (!zk) {
+            return r
+        }
+
+        def backends = zk.getJSONObject('backends')
+        if (!backends) {
+            return r
+        }
+
+        backends.each { k, v ->
+            if (k.contains('backend')) {
+                def backend = v as JSONObject
+                def servers = backend.getJSONObject('servers')
+                if (servers) {
+                    List<GwBackendServer> serverUrlList = servers.values().collect {
+                        def x = it as JSONObject
+                        new GwBackendServer(url: x.getString('url'), weight: x.getInteger('weight'))
+                    }
+                    r[k.replace('backend', '') as Integer] = serverUrlList.sort { it.url }
+                }
+            }
+        }
+
+        r
+    }
+
+    List<String> getBackendServerUrlListFromApi() {
+        def one = new GwClusterDTO(id: conf.clusterId).one() as GwClusterDTO
+        def serverUrl = one.serverUrl + ':' + one.dashboardPort
+
+        List<String> r = []
+        def body = HttpRequest.get(serverUrl + '/api').connectTimeout(500).readTimeout(1000).body()
+        def obj = JSON.parseObject(body)
+        def zk = obj.getJSONObject('zk')
+        if (!zk) {
+            return r
+        }
+
+        def backends = zk.getJSONObject('backends')
+        if (!backends) {
+            return r
+        }
+
+        def backend = backends.getJSONObject('backend' + conf.frontendId)
+        if (!backend) {
+            return r
+        }
+
+        def servers = backend.getJSONObject('servers')
+        if (!servers) {
+            return r
+        }
+
+        servers.values().collect {
+            def x = it as JSONObject
+            r << x.getString('url')
+        }
+        r.sort()
+    }
+
+    boolean isBackendServerListMatch() {
+        def list = getBackendServerUrlList()
+        def apiList = getBackendServerUrlListFromApi()
+        list == apiList
+    }
+
+    synchronized boolean changeBackend(String serverUrl, boolean isAdd = true, int weight = DEFAULT_WEIGHT, boolean waitUntilListenTrigger = false) {
         def frontend = new GwFrontendDTO(id: conf.frontendId).one() as GwFrontendDTO
         def backend = frontend.backend
 
@@ -58,52 +158,78 @@ class GatewayOperator {
             }
         }
 
+        boolean r
         if (needUpdate) {
             Event.builder().type(Event.Type.cluster).reason('gateway backend ' + (isAdd ? 'add' : 'remove')).
                     result('' + frontend.name).build().log(backend.serverList.toString()).toDto().add()
 
             frontend.update()
-            updateFrontend(frontend)
+            r = updateFrontend(frontend, waitUntilListenTrigger)
+        } else {
+            r = true
         }
+        log.info 'change backend result - ' + r + ' for ' + serverUrl + ' isAdd: ' + isAdd
+        r
     }
 
     private static void addKVPair(List<KVPair<String>> list, String path, Object value) {
         list << new KVPair<String>(key: path, value: value.toString())
     }
 
-    static boolean updateFrontend(GwFrontendDTO frontend) {
+    private static boolean deleteRecursive(ZkClient zk, String path) {
+        if (!zk.exists(path)) {
+            return true
+        }
+        List<String> children
+        try {
+            children = zk.getChildren(path)
+        } catch (ZkNoNodeException e) {
+            return true
+        }
+        if (children != null) {
+            for (String subPath : children) {
+                if (!deleteRecursive(zk, path + "/" + subPath)) {
+                    return false
+                }
+            }
+        }
+        return zk.delete(path)
+    }
+
+    synchronized boolean updateFrontend(GwFrontendDTO frontend, boolean waitUntilListenTrigger = false) {
         def one = new GwClusterDTO(id: frontend.clusterId).one() as GwClusterDTO
         def zk = ZkClientHolder.instance.create(one.zkNode)
 
         String rootPrefix
-        String prefix
         if (!one.prefix.startsWith('/')) {
             rootPrefix = '/' + one.prefix
-            prefix = '/' + rootPrefix + '/frontends/frontend' + frontend.id
         } else {
             rootPrefix = one.prefix
-            prefix = rootPrefix + '/frontends/frontend' + frontend.id
         }
 
+        String prefixFrontend = rootPrefix + '/frontends/frontend' + frontend.id
+        String prefixBackend = rootPrefix + '/backends/backend' + frontend.id
+
         List<KVPair<String>> list = []
-        addKVPair(list, prefix + '/backend', 'backend' + frontend.id)
-        addKVPair(list, prefix + '/priority', frontend.priority)
-        addKVPair(list, prefix + '/passhostheader', frontend.conf.passHostHeader)
+        addKVPair(list, prefixFrontend + '/backend', 'backend' + frontend.id)
+        addKVPair(list, prefixFrontend + '/priority', frontend.priority)
+        addKVPair(list, prefixFrontend + '/passhostheader', frontend.conf.passHostHeader)
 
         frontend.conf.ruleConfList.eachWithIndex { GwFrontendRuleConf it, int i ->
-            addKVPair(list, prefix + "/routes/rule_${i}/rule", "${it.type}${it.rule}")
+            addKVPair(list, prefixFrontend + "/routes/rule_${i}/rule", "${it.type}${it.rule}")
         }
         frontend.auth.basicList.eachWithIndex { KVPair it, int i ->
             def val = it.key + ':' + HttpRequest.Base64.encode("${it.value}")
-            addKVPair(list, prefix + "/auth/basic/users/${i}", val)
+            addKVPair(list, prefixFrontend + "/auth/basic/users/${i}", val)
         }
 
-        // backend
-        String prefixBackend = rootPrefix + '/backends/backend' + frontend.id
-
         def backend = frontend.backend
-        addKVPair(list, prefixBackend + "/maxconn/amount", backend.maxConn)
-        addKVPair(list, prefixBackend + "/loadbalancer/method", backend.loadBalancer)
+        if (backend.maxConn) {
+            addKVPair(list, prefixBackend + "/maxconn/amount", backend.maxConn)
+        }
+        if (backend.loadBalancer) {
+            addKVPair(list, prefixBackend + "/loadbalancer/method", backend.loadBalancer)
+        }
         if (backend.circuitBreaker) {
             addKVPair(list, prefixBackend + "/circuitbreaker/expression", backend.circuitBreaker)
         }
@@ -119,8 +245,14 @@ class GatewayOperator {
         }
 
         // remove frontend/backend
-        zk.deleteRecursive(prefix)
-        zk.deleteRecursive(prefixBackend)
+        def r = deleteRecursive(zk, prefixFrontend)
+        if (!r) {
+            throw new RuntimeException('failed to delete - ' + prefixFrontend)
+        }
+        def r2 = deleteRecursive(zk, prefixBackend)
+        if (!r2) {
+            throw new RuntimeException('failed to delete - ' + prefixBackend)
+        }
 
         list.each {
             def key = it.key
@@ -140,15 +272,36 @@ class GatewayOperator {
             }
         }
         // trigger reload
-        zk.deleteRecursive(rootPrefix + '/leader')
-        true
+        def r3 = deleteRecursive(zk, rootPrefix + '/leader')
+        if (!r3) {
+            throw new RuntimeException('failed to delete - ' + rootPrefix + '/leader')
+        }
+
+        if (!waitUntilListenTrigger) {
+            return true
+        }
+
+        final int times = Conf.instance.getInt('gw.waitUntilListenTriggerTimes', 3)
+        final int intervalSeconds = Conf.instance.getInt('gw.waitUntilListenTriggerIntervalSeconds', 1)
+
+        Thread.sleep(intervalSeconds * 1000)
+        for (i in (0..<times)) {
+            boolean isMatch = isBackendServerListMatch()
+            if (isMatch) {
+                return true
+            }
+            if (i != times - 1) {
+                Thread.sleep(intervalSeconds * 1000)
+            }
+        }
+        false
     }
 
     boolean addBackend(ContainerRunResult result, int weight) {
-        addBackend(scheme(result.nodeIp, result.port), true, weight)
+        addBackend(result.nodeIp, result.port, weight)
     }
 
-    boolean addBackend(String nodeIp, int port, int weight) {
+    boolean addBackend(String nodeIp, int port, int weight = DEFAULT_WEIGHT) {
         addBackend(scheme(nodeIp, port), true, weight)
     }
 
@@ -156,15 +309,15 @@ class GatewayOperator {
         if (!waitUntilHealthCheckOk(serverUrl, waitDelayFirst)) {
             return false
         }
-        changeBackend(serverUrl, true, weight)
+        changeBackend(serverUrl, true, weight, true)
     }
 
     boolean removeBackend(String nodeIp, Integer port) {
-        changeBackend(scheme(nodeIp, port), false)
+        removeBackend(scheme(nodeIp, port))
     }
 
     boolean removeBackend(String serverUrl) {
-        changeBackend(serverUrl, false)
+        changeBackend(serverUrl, false, DEFAULT_WEIGHT, true)
     }
 
     boolean isBackendReady(String nodeIp, int port) {
@@ -179,13 +332,15 @@ class GatewayOperator {
         String url = serverUrl + conf.healthCheckUri
         log.info 'begin health check - ' + url
 
-        try {
-            if (waitDelayFirst) {
-                Thread.sleep((conf.healthCheckDelaySeconds ?: 10) * 1000)
-            }
 
-            def timeout = conf.healthCheckTimeoutSeconds ?: 3
-            for (i in (0..<(conf.healthCheckTotalTimes ?: 3))) {
+        if (waitDelayFirst) {
+            Thread.sleep((conf.healthCheckDelaySeconds ?: 3) * 1000)
+        }
+
+        def timeout = conf.healthCheckTimeoutSeconds ?: 3
+        def times = conf.healthCheckTotalTimes ?: 3
+        for (i in (0..<times)) {
+            try {
                 def req = HttpRequest.get(url).connectTimeout(timeout * 1000).readTimeout(timeout * 1000)
                 def code = req.code()
                 if (200 == code) {
@@ -193,12 +348,14 @@ class GatewayOperator {
                     return true
                 }
                 log.warn 'health check fail for ' + url + ' - code - ' + code + ' - ' + req.body()
-                Thread.sleep((conf.healthCheckIntervalSeconds ?: 10) * 1000)
+            } catch (Exception e) {
+                log.error('health check error for ' + url, e)
+            } finally {
+                if (i != times - 1) {
+                    Thread.sleep((conf.healthCheckIntervalSeconds ?: 10) * 1000)
+                }
             }
-            return false
-        } catch (Exception e) {
-            log.error('health check error for ' + url, e)
-            return false
         }
+        return false
     }
 }

@@ -183,7 +183,7 @@ h.group('/container/manage') {
         def r = AgentCaller.instance.agentScriptExe(nodeIp, 'container inspect', [id: id])
         def container = r.getJSONObject('container')
         def hostConfig = container.getJSONObject('HostConfig')
-        hostConfig.getJSONObject('PortBindings')
+        hostConfig.getJSONObject('PortBindings') ?: 'No Port Bindings'
     }
 }
 
@@ -212,14 +212,16 @@ private void callAgentScript(Req req, Resp resp, String scriptName) {
             def containerInspectInfo = r.getJSONObject('container')
             def result = new ContainerRunResult(containerConfig: containerInspectInfo)
             result.extract(app.gatewayConf)
-            new GatewayOperator(app.gatewayConf).removeBackend(nodeIp, result.port)
+
+            def nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
+            GatewayOperator.create(appId, app.gatewayConf).removeBackend(nodeIpDockerHost, result.port)
         }
     }
 
     def lock = SpiSupport.createLock()
     lock.lockKey = 'operate app ' + (appId ?: user.name)
     boolean isDone = lock.exe {
-        def r = AgentCaller.instance.agentScriptExe(nodeIp, scriptName, [id: id])
+        def r = AgentCaller.instance.agentScriptExe(nodeIp, scriptName, [id: id, readTimeout: 1000 * 10])
         resp.end r.toJSONString()
     }
     if (!isDone) {
@@ -229,14 +231,17 @@ private void callAgentScript(Req req, Resp resp, String scriptName) {
 
 h.post('/api/container/create/tpl') { req, resp ->
     /*
-[clusterId      : createConf.clusterId,
-             appId          : createConf.appId,
-             appIdList      : createConf.appIdList,
-             nodeIp         : createConf.nodeIp,
-             nodeIpList     : createConf.nodeIpList,
-             instanceIndex  : createConf.instanceIndex,
-             containerNumber: conf.containerNumber,
-             imageTplId     : one.imageTplId]
+    def content = Agent.instance.post('/dms/api/container/create/tpl',
+            [clusterId       : createConf.clusterId,
+             appId           : createConf.appId,
+             appIdList       : createConf.appIdList,
+             nodeIp          : createConf.nodeIp,
+             nodeIpDockerHost: createConf.nodeIpDockerHost,
+             nodeIpList      : createConf.nodeIpList,
+             instanceIndex   : createConf.instanceIndex,
+             containerNumber : conf.containerNumber,
+             allAppLogDir    : createConf.globalEnvConf.allAppLogDir,
+             imageTplId      : one.imageTplId], String)
      */
     HashMap map = req.bodyAs()
     int clusterId = map.clusterId

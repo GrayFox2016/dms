@@ -1,7 +1,6 @@
 package agent
 
 import common.LimitQueue
-import common.Utils
 import groovy.transform.CompileStatic
 
 import java.util.concurrent.ConcurrentHashMap
@@ -13,32 +12,29 @@ class AgentTempInfoHolder {
         node, container, app
     }
 
-    ConcurrentHashMap<Type, LimitQueue<Map>> info = new ConcurrentHashMap<>()
-    ConcurrentHashMap<Integer, LimitQueue<Map>> metric = new ConcurrentHashMap<>()
+    LimitQueue<Map> nodeQueue
+    ConcurrentHashMap<Integer, LimitQueue<Map>> appMetricQueues = new ConcurrentHashMap<>()
+    ConcurrentHashMap<Integer, LimitQueue<Map>> containerMetricQueues = new ConcurrentHashMap<>()
 
     private int queueSize = 2880
 
     AgentTempInfoSender sender
 
-    void add(Type type, Map content) {
+    void addNode(Map content) {
         content.time = new Date()
-        content.type = type.name()
+        content.type = Type.node.name()
         content.nodeIp = Agent.instance.nodeIp
 
-        def queue = new LimitQueue<Map>(queueSize)
-        queue << content
-        def q = info.putIfAbsent(type, queue)
-        if (q) {
-            synchronized (q) {
-                q << content
-            }
+        if (nodeQueue == null) {
+            nodeQueue = new LimitQueue<Map>(queueSize)
         }
+        nodeQueue << content
         if (sender) {
-            sender.send(Utils.localIp(), content)
+            sender.send(Agent.instance.nodeIp, content)
         }
     }
 
-    void addMetric(Integer appId, Integer instanceIndex, Map content, String body) {
+    void addAppMetric(Integer appId, Integer instanceIndex, Map content, String body) {
         content.time = new Date()
         content.type = Type.app.name()
         content.nodeIp = Agent.instance.nodeIp
@@ -48,7 +44,28 @@ class AgentTempInfoHolder {
 
         def queue = new LimitQueue<Map>(queueSize)
         queue << content
-        def q = metric.putIfAbsent(appId, queue)
+        def q = appMetricQueues.putIfAbsent(appId, queue)
+        if (q) {
+            synchronized (q) {
+                q << content
+            }
+        }
+        if (sender) {
+            sender.send('' + appId, content)
+        }
+    }
+
+    void addContainerMetric(String containerId, Integer appId, Integer instanceIndex, Map content) {
+        content.time = new Date()
+        content.type = Type.container.name()
+        content.nodeIp = Agent.instance.nodeIp
+        content.containerId = containerId
+        content.appId = appId
+        content.instanceIndex = instanceIndex
+
+        def queue = new LimitQueue<Map>(queueSize)
+        queue << content
+        def q = containerMetricQueues.putIfAbsent(appId, queue)
         if (q) {
             synchronized (q) {
                 q << content

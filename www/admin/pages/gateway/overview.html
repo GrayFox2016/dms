@@ -45,11 +45,24 @@
 										<th width="30%">weight</th>
 										<th width="70%">url</th>
 									</tr>
-									<tr ng-repeat="x in one.backend.serverList">
+									<tr ng-repeat="x in one.serverList">
 										<td>
 											<p class="bg-info">{{x.weight}}</p>
 										</td>
-										<td>{{x.url}}</td>
+										<td ng-class="{'bg-danger': x.url.contains('!!!')}">{{x.url}}</td>
+									</tr>
+								</table>
+								<hr>
+								<table class="table table-bordered table-striped">
+									<tr>
+										<th width="30%">weight</th>
+										<th width="70%">url</th>
+									</tr>
+									<tr ng-repeat="x in one.apiBackendList">
+										<td>
+											<p class="bg-info">{{x.weight}}</p>
+										</td>
+										<td ng-class="{'bg-danger': x.url.contains('!!!')}">{{x.url}}</td>
 									</tr>
 								</table>
 							</td>

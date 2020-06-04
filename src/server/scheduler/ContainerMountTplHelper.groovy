@@ -7,6 +7,7 @@ import model.AppDTO
 
 @CompileStatic
 class ContainerMountTplHelper {
+    @CompileStatic
     static class OneApp {
         Integer appId
 
@@ -32,7 +33,7 @@ class ContainerMountTplHelper {
             }
 
             containerList.collect { x ->
-                ContainerHelper.getNodeIp(x)
+                ContainerHelper.getNodeIpDockerHost(x)
             }
         }
 

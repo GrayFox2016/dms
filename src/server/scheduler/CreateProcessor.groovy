@@ -59,6 +59,7 @@ class CreateProcessor implements GuardianProcessor {
                 if (abConf) {
                     if (instanceIndex < abConf.containerNumber) {
                         confCopy.image = abConf.image
+                        confCopy.tag = abConf.tag
                     }
                 }
 
@@ -77,6 +78,7 @@ class CreateProcessor implements GuardianProcessor {
             if (abConf) {
                 if (instanceIndex < abConf.containerNumber) {
                     confCopy.image = abConf.image
+                    confCopy.tag = abConf.tag
                 }
             }
 
@@ -110,11 +112,15 @@ class CreateProcessor implements GuardianProcessor {
                     GatewayOperator.DEFAULT_WEIGHT
             result.extract(gatewayConf)
 
-            def isAddOk = new GatewayOperator(gatewayConf).addBackend(result, w)
+            def isAddOk = GatewayOperator.create(app.id, gatewayConf).addBackend(result, w)
             String message = "add to cluster ${gatewayConf.clusterId} frontend ${gatewayConf.frontendId} - ${isAddOk}"
                     .toString()
             result.keeper.next(JobStepKeeper.Step.addToGateway, message)
             result.keeper.next(JobStepKeeper.Step.done, '', isAddOk)
+
+//            if (!isAddOk) {
+//                throw new RuntimeException('add to gateway fail - ' + result.nodeIp + ':' + result.port)
+//            }
         } else {
             result.keeper.next(JobStepKeeper.Step.done)
         }
@@ -153,7 +159,7 @@ class CreateProcessor implements GuardianProcessor {
     }
 
     List<String> chooseNodeList(int clusterId, int appId, int runNumber, AppConf conf, List<String> excludeNodeIpList = null) {
-        def list = chooseNodeList(clusterId, conf.excludeNodeTagList, excludeNodeIpList, conf.targetNodeTagList)
+        def nodeList = chooseNodeList(clusterId, conf.excludeNodeTagList, excludeNodeIpList, conf.targetNodeTagList)
 
         def containerList = InMemoryAllContainerManager.instance.getContainerList(clusterId)
         Map<String, List<JSONObject>> groupByNodeIp = containerList.findAll { x ->
@@ -164,7 +170,7 @@ class CreateProcessor implements GuardianProcessor {
 
         boolean isLimitNode = conf.envList.any { it.key?.contains('X_LIMIT_NODE') }
         // exclude node that has this app's running container
-        list = list.findAll {
+        def list = nodeList.findAll {
             def subList = groupByNodeIp[it.ip]
             if (!subList) {
                 return true
@@ -255,7 +261,9 @@ class CreateProcessor implements GuardianProcessor {
             if (!publicPort) {
                 throw new RuntimeException('no public port get for ' + app.name)
             }
-            def isRemoveBackendOk = new GatewayOperator(gatewayConf).removeBackend(nodeIp, publicPort)
+
+            def nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
+            def isRemoveBackendOk = GatewayOperator.create(app.id, gatewayConf).removeBackend(nodeIpDockerHost, publicPort)
             keeper.next(JobStepKeeper.Step.removeFromGateway, 'remove backend result - ' + isRemoveBackendOk)
         }
 
@@ -266,7 +274,7 @@ class CreateProcessor implements GuardianProcessor {
             def r = AgentCaller.instance.agentScriptExe(nodeIp, 'container inspect', p)
             def containerInspectInfo = r.getJSONObject('container')
             def state = containerInspectInfo.getJSONObject('State').getString('Status')
-            if ('created' == state) {
+            if ('created' == state || 'running' == state) {
                 p.isRemoveAfterStop = '1'
                 AgentCaller.instance.agentScriptExe(nodeIp, 'container stop', p)
                 log.info 'done stop and remove container - ' + id + ' - ' + app.id
@@ -324,8 +332,12 @@ class CreateProcessor implements GuardianProcessor {
         createContainerConf.clusterId = clusterId
         createContainerConf.appId = appId
         createContainerConf.nodeIp = nodeIp
+        createContainerConf.nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
         createContainerConf.instanceIndex = instanceIndex
         createContainerConf.nodeIpList = nodeIpList
+        createContainerConf.nodeIpDockerHostList = nodeIpList.collect {
+            InMemoryAllContainerManager.instance.getNodeIpDockerHost(it)
+        }
         createContainerConf.imageWithTag = imageWithTag
 
         def cluster = new ClusterDTO(id: clusterId).one() as ClusterDTO

@@ -11,6 +11,8 @@ class CreateContainerConf {
 
     String nodeIp
 
+    String nodeIpDockerHost
+
     Integer appId
 
     Integer clusterId
@@ -18,6 +20,8 @@ class CreateContainerConf {
     Integer instanceIndex
 
     List<String> nodeIpList
+
+    List<String> nodeIpDockerHostList
 
     List<Integer> appIdList
 

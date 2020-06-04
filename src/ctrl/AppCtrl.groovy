@@ -112,7 +112,7 @@ h.group('/app') {
 
         def appJobList = new AppJobDTO(appId: one.id).queryFields('id').loadList() as List<AppJobDTO>
         if (appJobList) {
-            new AppJobLogDTO().whereIn('app_id', appJobList.collect { it.appId }).deleteAll()
+            new AppJobLogDTO().whereIn('job_id', appJobList.collect { it.id }).deleteAll()
             new AppJobDTO(appId: one.id).deleteAll()
         }
         new AppDTO(id: one.id).delete()
@@ -148,11 +148,18 @@ h.group('/app') {
                 } else {
                     one.update()
                     log.info 'change from ' + oldConf + ' to ' + conf
-                    def jobId = new AppJobDTO(appId: one.id, failNum: 0,
-                            status: AppJobDTO.Status.created.val,
-                            jobType: AppJobDTO.JobType.scroll.val,
-                            createdDate: new Date(), updatedDate: new Date()).add()
-                    return oldOne.autoManage() ? [id: one.id, jobId: jobId] : [id: one.id]
+
+                    // check if need a scroll job
+                    def containerList = InMemoryAllContainerManager.instance.getContainerList(one.clusterId, one.id)
+                    if (containerList.size() == oldConf.containerNumber) {
+                        def jobId = new AppJobDTO(appId: one.id, failNum: 0,
+                                status: AppJobDTO.Status.created.val,
+                                jobType: AppJobDTO.JobType.scroll.val,
+                                createdDate: new Date(), updatedDate: new Date()).add()
+                        return oldOne.autoManage() ? [id: one.id, jobId: jobId] : [id: one.id]
+                    } else {
+                        return [id: one.id]
+                    }
                 }
             } else {
                 if (oldConf.containerNumber == conf.containerNumber) {

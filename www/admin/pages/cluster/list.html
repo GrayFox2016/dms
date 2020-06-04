@@ -103,8 +103,8 @@
 				<button class="btn" ng-click="editOne.globalEnvConf.envList.push({})">Add One Env</button>
 			</div>
 			<div style="margin: 5px;" ng-repeat="param in editOne.globalEnvConf.envList">
-				<span>Env Key<input type="text" ng-model="param.key" class="input-short" /></span>
-				<span>Env Value<input type="text" ng-model="param.value" class="input-short" /></span>
+				<span>Env Key<input type="text" ng-model="param.key" style="width: 80px;" /></span>
+				<span>Env Value<input type="text" ng-model="param.value" style="width: 120px;" /></span>
 				<span>
 					<button class="btn" ng-click="editOne.globalEnvConf.envList.remove(param)">-</button>
 				</span>

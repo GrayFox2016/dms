@@ -29,5 +29,5 @@ r.fsUsageList = sigar.fileSystemList.collect { FileSystem it ->
      free      : (usage.free / 1024 / 1024).doubleValue().round(2),
      usePercent: usage.usePercent * 100]
 }
-AgentTempInfoHolder.instance.add(AgentTempInfoHolder.Type.node, r)
+AgentTempInfoHolder.instance.addNode(r)
 r

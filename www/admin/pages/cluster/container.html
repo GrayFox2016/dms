@@ -55,6 +55,7 @@
 									<br />
 									<button class="btn" ng-click="showBindList(x)">Volume Binds</button>
 									<button class="btn" ng-click="showPortBind(x)">Port Binds</button>
+									<button class="btn" ng-click="showStats(x)">Stats</button>
 								</td>
 							</tr>
 						</table>
@@ -200,6 +201,27 @@
 </td>
 </tr>
 </table>
+</script>
+
+
+<script type="text/x-template"
+ui-dialog="{showModel: 'ctrl.isShowContainerStats', title: 'Container Stats', dialogId: 'dialogContainerStats', lock: true, fixPosition: true, fixed: true, ext: {max: false}}">
+<div class="form-group" style="width: 1200px;">
+<span style="padding-left: 20px; margin-right: 20px;">Node Ip</span><span class="bg-info">{{tmp.targetContainer.Node_Ip}}</span>
+</div>
+
+<ul class="nav nav-tabs" ui-tabs="{beforeFn: 'changeContainerStatsTab'}">
+<li class="active"><a>Cpu Usage</a></li>
+<li><a>Memory Usage</a></li>
+</ul>
+<div class="tabs active">
+<div style="height: 400px; width: 1200px;"
+ui-chart-line="{scopeDataName: 'tmp.containerCpuChartData', name: 'Use Percent', title: 'Container Cpu Usage'}"></div>
+</div>
+<div class="tabs">
+<div style="height: 400px; width: 1200px;"
+ui-chart-line="{scopeDataName: 'tmp.containerMemChartData', name: 'Use Bytes', title: 'Container Memory Usage'}"></div>
+</div>
 </script>
 
 </div>
