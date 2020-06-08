@@ -7,6 +7,7 @@ import com.github.zkclient.ZkClient
 import com.github.zkclient.exception.ZkNoNodeException
 import common.Conf
 import common.Event
+import ex.GatewayProcessException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import model.GwClusterDTO
@@ -247,11 +248,11 @@ class GatewayOperator {
         // remove frontend/backend
         def r = deleteRecursive(zk, prefixFrontend)
         if (!r) {
-            throw new RuntimeException('failed to delete - ' + prefixFrontend)
+            throw new GatewayProcessException('failed to delete - ' + prefixFrontend)
         }
         def r2 = deleteRecursive(zk, prefixBackend)
         if (!r2) {
-            throw new RuntimeException('failed to delete - ' + prefixBackend)
+            throw new GatewayProcessException('failed to delete - ' + prefixBackend)
         }
 
         list.each {
@@ -274,7 +275,7 @@ class GatewayOperator {
         // trigger reload
         def r3 = deleteRecursive(zk, rootPrefix + '/leader')
         if (!r3) {
-            throw new RuntimeException('failed to delete - ' + rootPrefix + '/leader')
+            throw new GatewayProcessException('failed to delete - ' + rootPrefix + '/leader')
         }
 
         if (!waitUntilListenTrigger) {

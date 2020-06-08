@@ -21,6 +21,8 @@ abstract class IntervalJob {
 
     long intervalCount = 0
 
+    boolean isDelayRelative = false
+
     void stop() {
         if (scheduler) {
             scheduler.shutdown()
@@ -29,6 +31,10 @@ abstract class IntervalJob {
     }
 
     void start() {
+        def now = new Date()
+        int sec = now.seconds
+        long delaySeconds = isDelayRelative ? (interval - (sec % interval)) : interval
+
         def threadName = name().replaceAll(' ', '_')
         scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory(threadName))
         scheduler.scheduleWithFixedDelay({
@@ -41,7 +47,7 @@ abstract class IntervalJob {
             } catch (Exception e) {
                 log.error('do interval job error - ' + name(), e)
             }
-        }, interval, interval, TimeUnit.SECONDS)
+        }, delaySeconds, interval, TimeUnit.SECONDS)
         log.info 'start interval job - ' + name()
     }
 }

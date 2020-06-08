@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
 import com.github.kevinsawicki.http.HttpRequest
 import common.Const
+import ex.HttpInvokeException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.exception.ExceptionUtils
@@ -34,7 +35,7 @@ class AgentCaller {
                 log.warn('server get agent info fail - ' + uri + ' - ' + params + ' - ' + body)
                 failCallback.call(body)
             } else {
-                throw new RuntimeException('server get agent info fail - ' + uri + ' - ' + params + ' - ' + body)
+                throw new HttpInvokeException('server get agent info fail - ' + uri + ' - ' + params + ' - ' + body)
             }
         }
         if (clz == String) {
@@ -67,7 +68,7 @@ class AgentCaller {
                     log.warn('server post agent info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
                     failCallback.call(body)
                 } else {
-                    throw new RuntimeException('server post agent info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
+                    throw new HttpInvokeException('server post agent info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
                 }
             }
             if (clz == String) {

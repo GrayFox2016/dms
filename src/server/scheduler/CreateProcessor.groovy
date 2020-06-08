@@ -3,6 +3,7 @@ package server.scheduler
 import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
 import common.ContainerHelper
+import ex.JobProcessException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import model.*
@@ -40,7 +41,7 @@ class CreateProcessor implements GuardianProcessor {
         def targetNodeIpList = conf.targetNodeIpList
         if (targetNodeIpList) {
             if (targetNodeIpList.size() < runNumber) {
-                throw new RuntimeException('node not ok - ' + runNumber + ' but available node number - ' + targetNodeIpList.size())
+                throw new JobProcessException('node not ok - ' + runNumber + ' but available node number - ' + targetNodeIpList.size())
             }
             instanceIndexList.each { i ->
                 nodeIpList << targetNodeIpList[i]
@@ -97,7 +98,7 @@ class CreateProcessor implements GuardianProcessor {
         latch.await()
 
         if (exceptionByInstanceIndex) {
-            throw new RuntimeException(exceptionByInstanceIndex.collect {
+            throw new JobProcessException(exceptionByInstanceIndex.collect {
                 "${it.key} - " + ExceptionUtils.getFullStackTrace(it.value)
             }.join("\r\n"))
         }
@@ -119,7 +120,7 @@ class CreateProcessor implements GuardianProcessor {
             result.keeper.next(JobStepKeeper.Step.done, '', isAddOk)
 
 //            if (!isAddOk) {
-//                throw new RuntimeException('add to gateway fail - ' + result.nodeIp + ':' + result.port)
+//                throw new JobProcessException('add to gateway fail - ' + result.nodeIp + ':' + result.port)
 //            }
         } else {
             result.keeper.next(JobStepKeeper.Step.done)
@@ -130,7 +131,7 @@ class CreateProcessor implements GuardianProcessor {
                                            List<String> excludeNodeIpList, List<String> targetNodeTagList) {
         def nodeList = InMemoryAllContainerManager.instance.getHeartBeatOkNodeList(clusterId)
         if (!nodeList) {
-            throw new RuntimeException('node not ready')
+            throw new JobProcessException('node not ready')
         }
 
         List<NodeDTO> list = nodeList
@@ -190,7 +191,7 @@ class CreateProcessor implements GuardianProcessor {
                     list << list[-1]
                 }
             } else {
-                throw new RuntimeException('node not enough - ' + runNumber + ' but only have node available - ' + list.size())
+                throw new JobProcessException('node not enough - ' + runNumber + ' but only have node available - ' + list.size())
             }
         }
 
@@ -237,7 +238,7 @@ class CreateProcessor implements GuardianProcessor {
             }
         }
         if (leftResourceList.size() < runNumber) {
-            throw new RuntimeException('node not enough - ' + runNumber + ' but only have node available - ' + leftResourceList.size())
+            throw new JobProcessException('node not enough - ' + runNumber + ' but only have node available - ' + leftResourceList.size())
         }
 
         List<String> nodeIpList = []
@@ -259,7 +260,7 @@ class CreateProcessor implements GuardianProcessor {
         if (gatewayConf) {
             def publicPort = ContainerHelper.getPublicPort(gatewayConf.containerPrivatePort, x)
             if (!publicPort) {
-                throw new RuntimeException('no public port get for ' + app.name)
+                throw new JobProcessException('no public port get for ' + app.name)
             }
 
             def nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
@@ -313,7 +314,7 @@ class CreateProcessor implements GuardianProcessor {
             def pullImageR = AgentCaller.instance.agentScriptExe(nodeIp, 'container image pull', p)
             Boolean isError = pullImageR.getBoolean('isError')
             if (isError && isError.booleanValue()) {
-                throw new RuntimeException('pull image fail - ' + imageWithTag + ' - ' + pullImageR.getString('message'))
+                throw new JobProcessException('pull image fail - ' + imageWithTag + ' - ' + pullImageR.getString('message'))
             }
 
             def listImageAgainR = AgentCaller.instance.agentScriptExe(nodeIp, 'container image list', p)
@@ -321,7 +322,7 @@ class CreateProcessor implements GuardianProcessor {
             if (imageListAgain) {
                 keeper.next(JobStepKeeper.Step.pullImage, 'done pulled image ' + imageWithTag)
             } else {
-                throw new RuntimeException('pull image fail - ' + imageWithTag + ' - ' + nodeIp)
+                throw new JobProcessException('pull image fail - ' + imageWithTag + ' - ' + nodeIp)
             }
         } else {
             keeper.next(JobStepKeeper.Step.pullImage, 'skip pulled image ' + imageWithTag)
@@ -358,7 +359,7 @@ class CreateProcessor implements GuardianProcessor {
             for (pre in preList) {
                 def isCheckOk = CachedGroovyClassLoader.instance.eval(pre.content, evalP) as boolean
                 if (!isCheckOk) {
-                    throw new RuntimeException('container run pre check fail - ' + instanceIndex + ' - when check ' + pre.name)
+                    throw new JobProcessException('container run pre check fail - ' + instanceIndex + ' - when check ' + pre.name)
                 }
                 keeper.next(JobStepKeeper.Step.preCheck, pre.name)
             }
@@ -373,14 +374,14 @@ class CreateProcessor implements GuardianProcessor {
         }.flatten()
         def thisAppMountVolumeDirList = conf.dirVolumeList.collect { it.dir }.findAll { !(it in skipVolumeDirSet) }
         if (thisAppMountVolumeDirList.any { it in otherAppMountVolumeDirList }) {
-            throw new RuntimeException('node volume conflict check fail - ' + nodeIp + ' - ' + thisAppMountVolumeDirList)
+            throw new JobProcessException('node volume conflict check fail - ' + nodeIp + ' - ' + thisAppMountVolumeDirList)
         }
 
         def createP = [jsonStr: JsonWriter.instance.json(createContainerConf)]
         def createR = AgentCaller.instance.agentScriptExe(nodeIp, 'container create', createP)
         Boolean isError = createR.getBoolean('isError')
         if (isError && isError.booleanValue()) {
-            throw new RuntimeException('create container fail - ' + imageWithTag + ' - ' + createR.getString('message'))
+            throw new JobProcessException('create container fail - ' + imageWithTag + ' - ' + createR.getString('message'))
         }
 
         def containerConfig = createR.getJSONObject('containerConfig')
@@ -390,7 +391,7 @@ class CreateProcessor implements GuardianProcessor {
         def startR = AgentCaller.instance.agentScriptExe(nodeIp, 'container start', [id: containerId])
         Boolean isErrorStart = startR.getBoolean('isError')
         if (isErrorStart && isErrorStart.booleanValue()) {
-            throw new RuntimeException('start container fail - ' + imageWithTag + ' - ' + startR.getString('message'))
+            throw new JobProcessException('start container fail - ' + imageWithTag + ' - ' + startR.getString('message'))
         }
         keeper.next(JobStepKeeper.Step.startContainer, 'id: ' + containerId)
 
@@ -402,7 +403,7 @@ class CreateProcessor implements GuardianProcessor {
                             [id: containerId, initCmd: initCmd])
                     Boolean isErrorInit = initR.getBoolean('isError')
                     if (isErrorInit && isErrorInit.booleanValue()) {
-                        throw new RuntimeException('init container fail - ' + imageWithoutTag + ' - ' + initR.getString('message'))
+                        throw new JobProcessException('init container fail - ' + imageWithoutTag + ' - ' + initR.getString('message'))
                     }
                     keeper.next(JobStepKeeper.Step.initContainer, 'done ' + init.name + ' - ' + initCmd + ' - ' +
                             initR.getString('message'))
@@ -416,7 +417,7 @@ class CreateProcessor implements GuardianProcessor {
             for (after in afterList) {
                 def isCheckOk = CachedGroovyClassLoader.instance.eval(after.content, evalP) as boolean
                 if (!isCheckOk) {
-                    throw new RuntimeException('container run after check fail - ' + instanceIndex + ' - when check ' + after.name)
+                    throw new JobProcessException('container run after check fail - ' + instanceIndex + ' - when check ' + after.name)
                 }
                 keeper.next(JobStepKeeper.Step.afterCheck, after.name)
             }

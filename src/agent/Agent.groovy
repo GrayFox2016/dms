@@ -10,6 +10,7 @@ import common.Event
 import common.IntervalJob
 import common.LimitQueue
 import common.Utils
+import ex.HttpInvokeException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import model.json.LiveCheckConf
@@ -76,7 +77,7 @@ class Agent extends IntervalJob {
                 log.warn('agent get server info fail - ' + uri + ' - ' + params + ' - ' + body)
                 failCallback.call(body)
             } else {
-                throw new RuntimeException('agent get server info fail - ' + uri + ' - ' + params + ' - ' + body)
+                throw new HttpInvokeException('agent get server info fail - ' + uri + ' - ' + params + ' - ' + body)
             }
         }
         if (clz == String) {
@@ -98,7 +99,7 @@ class Agent extends IntervalJob {
                 log.warn('agent post server info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
                 failCallback.call(body)
             } else {
-                throw new RuntimeException('agent post server info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
+                throw new HttpInvokeException('agent post server info fail - ' + uri + ' - ' + sendBody + ' - ' + body)
             }
         }
         if (clz == String) {
