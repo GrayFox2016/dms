@@ -32,7 +32,7 @@ if (Conf.isWindows()) {
         System.setProperty('DOCKER_CERT_PATH', 'C:\\Users\\kerry\\.docker\\machine\\machines\\default')
     }
     // boot2docker virtual box ip
-    agent.nodeIpDockerHost = '192.168.99.100'
+    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', '192.168.99.100')
 }
 agent.nodeIp = Utils.localIp()
 if (!agent.nodeIpDockerHost) {
