@@ -1,7 +1,10 @@
 package server.scheduler
 
 import com.alibaba.fastjson.JSONObject
-import common.*
+import common.Conf
+import common.Event
+import common.IntervalJob
+import common.LimitQueue
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import model.*
@@ -9,8 +12,12 @@ import org.apache.commons.lang.exception.ExceptionUtils
 import org.segment.d.D
 import server.AgentCaller
 import server.InMemoryAllContainerManager
+import server.dns.DnsOperator
+import server.dns.EtcdClientHolder
 import server.gateway.GatewayOperator
 import spi.SpiSupport
+
+import static common.ContainerHelper.*
 
 @CompileStatic
 @Singleton
@@ -66,13 +73,13 @@ class Guardian extends IntervalJob {
                 }
 
                 def thisAppContainerList = containerList.findAll { x ->
-                    app.id == ContainerHelper.getAppId(x)
+                    app.id == getAppId(x)
                 }
 
                 def lock = SpiSupport.createLock()
                 lock.lockKey = 'guard ' + app.id
                 boolean isDone = lock.exe {
-                    checkApp(app, thisAppContainerList)
+                    checkApp(cluster, app, thisAppContainerList)
                 }
                 if (!isDone) {
                     log.info 'get app guard lock fail - ' + app.name
@@ -164,10 +171,10 @@ class Guardian extends IntervalJob {
 
     private void stopNotRunning(Integer appId, List<JSONObject> containerList) {
         containerList.findAll { x ->
-            !ContainerHelper.isRunning(x)
+            !isRunning(x)
         }.each { x ->
-            def id = ContainerHelper.getContainerId(x)
-            def nodeIp = ContainerHelper.getNodeIp(x)
+            def id = getContainerId(x)
+            def nodeIp = getNodeIp(x)
 
             def p = [id: id]
             if ('created' == x.getString('State')) {
@@ -185,13 +192,26 @@ class Guardian extends IntervalJob {
         }
     }
 
-    boolean guard(AppDTO app, List<JSONObject> containerList) {
+    boolean guard(ClusterDTO cluster, AppDTO app, List<JSONObject> containerList) {
         try {
             stopNotRunning(app.id, containerList)
             def list = containerList.findAll { x ->
-                ContainerHelper.isRunning(x)
+                isRunning(x)
             }
-            // update dns, todo
+
+            // update dns
+            if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
+                if (intervalCount % 10 == 0) {
+                    def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
+                    def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
+                    for (x in list) {
+                        boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).put(
+                                generateContainerHostname(app.id, getAppInstanceIndex(x)),
+                                getNodeIpDockerHost(x), dnsTtl)
+                        log.info 'done update dns record - ' + app.name + ' - ' + isOk
+                    }
+                }
+            }
 
             def containerNumber = app.conf.containerNumber
             if (containerNumber == list.size()) {
@@ -203,8 +223,8 @@ class Guardian extends IntervalJob {
                 // check gateway
                 def operator = GatewayOperator.create(app.id, gatewayConf)
                 List<String> runningServerUrlList = list.collect { x ->
-                    def nodeIpDockerHost = ContainerHelper.getNodeIpDockerHost(x)
-                    def publicPort = ContainerHelper.getPublicPort(gatewayConf.containerPrivatePort, x)
+                    def nodeIpDockerHost = getNodeIpDockerHost(x)
+                    def publicPort = getPublicPort(gatewayConf.containerPrivatePort, x)
                     GatewayOperator.scheme(nodeIpDockerHost, publicPort)
                 }
                 List<String> backendServerUrlList = operator.getBackendServerUrlListFromApi()
@@ -226,7 +246,7 @@ class Guardian extends IntervalJob {
                     List<Integer> needRunInstanceIndexList = []
                     (0..<containerNumber).each { Integer i ->
                         def one = list.find { x ->
-                            i == ContainerHelper.getAppInstanceIndex(x)
+                            i == getAppInstanceIndex(x)
                         }
                         if (!one) {
                             needRunInstanceIndexList << i
@@ -258,7 +278,7 @@ class Guardian extends IntervalJob {
             }
 
             def list = containerList.sort { x ->
-                ContainerHelper.getAppId(x)
+                getAppId(x)
             }
             def app = new AppDTO(id: job.appId).one() as AppDTO
             if (!app) {
@@ -283,7 +303,7 @@ class Guardian extends IntervalJob {
         }
     }
 
-    void checkApp(AppDTO app, List<JSONObject> containerList) {
+    void checkApp(ClusterDTO cluster, AppDTO app, List<JSONObject> containerList) {
         final int appJobBatchSize = Conf.instance.getInt('appJobBatchSize', 10)
         final int appJobMaxFailTimes = Conf.instance.getInt('appJobMaxFailTimes', 3)
 
@@ -315,7 +335,7 @@ class Guardian extends IntervalJob {
                 failAppJobIdListCopy << app.id
             }
         } else {
-            boolean isOk = guard(app, containerList)
+            boolean isOk = guard(cluster, app, containerList)
             if (!isOk) {
                 failGuardAppIdListCopy << app.id
             } else {

@@ -83,7 +83,10 @@
 								<br />
 								Usage: <p class="bg-info">{{one.memoryUsedPercent}}%</p>
 							</td>
-							<td>{{one.updatedDate|date:'yyyy/MM/dd HH:mm:ss'}}</td>
+							<td>
+								<p>Version: {{one.agentVersion}}</p>
+								<p>{{one.updatedDate|date:'yyyy/MM/dd HH:mm:ss'}}</p>
+							</td>
 							<td class="opts">
 								<button class="btn" ng-click="updateTags(one.id, one.nodeIp, one.tags)">Update
 									Tags</button>

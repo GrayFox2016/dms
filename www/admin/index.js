@@ -328,6 +328,9 @@ $(function () {
         }, 'eg. 127.0.0.1,127.0.0.1');
         uiValid.regPat('endpoints', function (val) {
             return _.every(val.split(','), function (it) {
+                if (it.indexOf('http://') != -1) {
+                    it = it.replace('http://', '');
+                }
                 var arr2 = it.split(':');
                 if (arr2.length != 2) {
                     return false;

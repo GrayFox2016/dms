@@ -5,6 +5,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import model.AppDTO
 import model.AppJobDTO
+import model.ClusterDTO
 import server.InMemoryAllContainerManager
 import spi.SpiSupport
 
@@ -31,8 +32,9 @@ class RunAppTask implements Runnable {
         def lock = SpiSupport.createLock()
         lock.lockKey = 'guard ' + appId
         lock.exe {
+            def cluster = new ClusterDTO(id: app.clusterId).one() as ClusterDTO
             def containerList = InMemoryAllContainerManager.instance.getContainerList(app.clusterId, appId)
-            boolean isOk = Guardian.instance.guard(app, containerList)
+            boolean isOk = Guardian.instance.guard(cluster, app, containerList)
             if (!isOk) {
                 def job = new AppJobDTO(appId: appId).orderBy('created_date desc').one() as AppJobDTO
                 if (job && job.status == AppJobDTO.Status.created.val) {

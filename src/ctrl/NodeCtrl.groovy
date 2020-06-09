@@ -37,7 +37,7 @@ h.group('/node') {
         def clusterId = req.param('clusterId')
         assert clusterId
         def nodeList = new NodeDTO(clusterId: clusterId as int).
-                queryFields('id,ip,tags,updated_date').loadList() as List<NodeDTO>
+                queryFields('id,ip,tags,updated_date,agent_version').loadList() as List<NodeDTO>
         nodeList.sort { a, b ->
             Utils.compareIp(a.ip, b.ip)
         }
@@ -54,6 +54,7 @@ h.group('/node') {
             } / cpuPercList.size()) : 0
             [id               : it.id,
              nodeIp           : it.ip,
+             agentVersion     : it.agentVersion,
              updatedDate      : it.updatedDate,
              isOk             : instance.getHeartBeatDate(it.ip) > dat,
              isLiveCheckOk    : info.getBoolean('isLiveCheckOk'),

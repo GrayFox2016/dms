@@ -2,7 +2,7 @@ package server.scheduler
 
 import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
-import common.ContainerHelper
+import common.Conf
 import ex.JobProcessException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -14,10 +14,14 @@ import org.segment.d.json.JsonWriter
 import org.segment.web.common.CachedGroovyClassLoader
 import server.AgentCaller
 import server.InMemoryAllContainerManager
+import server.dns.DnsOperator
+import server.dns.EtcdClientHolder
 import server.gateway.GatewayOperator
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+
+import static common.ContainerHelper.*
 
 @CompileStatic
 @Slf4j
@@ -164,9 +168,9 @@ class CreateProcessor implements GuardianProcessor {
 
         def containerList = InMemoryAllContainerManager.instance.getContainerList(clusterId)
         Map<String, List<JSONObject>> groupByNodeIp = containerList.findAll { x ->
-            ContainerHelper.getAppName(x) != ContainerHelper.APP_NAME_OTHER
+            getAppName(x) != APP_NAME_OTHER
         }.groupBy { x ->
-            ContainerHelper.getNodeIp(x)
+            getNodeIp(x)
         }
 
         boolean isLimitNode = conf.envList.any { it.key?.contains('X_LIMIT_NODE') }
@@ -181,7 +185,7 @@ class CreateProcessor implements GuardianProcessor {
             }
 
             def isThisNodeIncludeThisAppContainer = subList.any { x ->
-                appId == ContainerHelper.getAppId(x) && ContainerHelper.isRunning(x)
+                appId == getAppId(x) && isRunning(x)
             }
             !isThisNodeIncludeThisAppContainer
         }
@@ -207,7 +211,7 @@ class CreateProcessor implements GuardianProcessor {
 
             def subList = groupByNodeIp[node.ip]
             List<ContainerResourceAsk> otherAppResourceAskList = subList ? subList.collect { x ->
-                def otherAppId = ContainerHelper.getAppId(x)
+                def otherAppId = getAppId(x)
                 def otherApp = otherAppCached[otherAppId]
                 if (!otherApp) {
                     def appOne = new AppDTO(id: otherAppId).queryFields('conf').one() as AppDTO
@@ -253,12 +257,12 @@ class CreateProcessor implements GuardianProcessor {
     }
 
     JobStepKeeper stopOneContainer(int jobId, AppDTO app, JSONObject x) {
-        def nodeIp = ContainerHelper.getNodeIp(x)
-        def instanceIndex = ContainerHelper.getAppInstanceIndex(x)
+        def nodeIp = getNodeIp(x)
+        def instanceIndex = getAppInstanceIndex(x)
         def keeper = new JobStepKeeper(jobId: jobId, instanceIndex: instanceIndex, nodeIp: nodeIp)
         def gatewayConf = app.gatewayConf
         if (gatewayConf) {
-            def publicPort = ContainerHelper.getPublicPort(gatewayConf.containerPrivatePort, x)
+            def publicPort = getPublicPort(gatewayConf.containerPrivatePort, x)
             if (!publicPort) {
                 throw new JobProcessException('no public port get for ' + app.name)
             }
@@ -268,7 +272,7 @@ class CreateProcessor implements GuardianProcessor {
             keeper.next(JobStepKeeper.Step.removeFromGateway, 'remove backend result - ' + isRemoveBackendOk)
         }
 
-        def id = ContainerHelper.getContainerId(x)
+        def id = getContainerId(x)
         def p = [id: id]
 
         try {
@@ -394,6 +398,15 @@ class CreateProcessor implements GuardianProcessor {
             throw new JobProcessException('start container fail - ' + imageWithTag + ' - ' + startR.getString('message'))
         }
         keeper.next(JobStepKeeper.Step.startContainer, 'id: ' + containerId)
+
+        // update dns
+        if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
+            def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
+            def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
+            boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).
+                    put(generateContainerHostname(appId, instanceIndex), nodeIp, dnsTtl)
+            keeper.next(JobStepKeeper.Step.updateDns, 'done update dns record - ' + isOk)
+        }
 
         if (initList) {
             for (init in initList) {

@@ -12,9 +12,9 @@ class ZkClientHolder {
 
     synchronized ZkClient create(String connectString, int sessionTimeout = 1000 * 30,
                                  int connectionTimeout = 1000 * 10) {
-        def zk = cached[connectString]
-        if (zk) {
-            return zk
+        def client = cached[connectString]
+        if (client) {
+            return client
         }
 
         def one = new ZkClient(connectString, sessionTimeout, connectionTimeout)

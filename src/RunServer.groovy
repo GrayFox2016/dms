@@ -9,6 +9,7 @@ import org.segment.web.common.CachedGroovyClassLoader
 import org.segment.web.handler.ChainHandler
 import org.slf4j.LoggerFactory
 import server.InMemoryAllContainerManager
+import server.dns.EtcdClientHolder
 import server.gateway.ZkClientHolder
 import server.scheduler.Guardian
 import spi.SpiSupport
@@ -71,5 +72,6 @@ Utils.stopWhenConsoleQuit {
     guardian.stop()
     manager.stop()
     ds.closeConnect()
+    EtcdClientHolder.instance.close()
     ZkClientHolder.instance.close()
 }

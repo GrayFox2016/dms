@@ -128,6 +128,9 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid) {
         if (!one.conf.envList) {
             one.conf.envList = [];
         }
+        if (!one.conf.uLimitList) {
+            one.conf.uLimitList = [];
+        }
         if (!one.conf.portList) {
             one.conf.portList = [];
         }
@@ -154,6 +157,7 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid) {
         var one = {};
         one.conf = { memMB: '1024', cpuShare: '1024', cpuFixed: '0', containerNumber: '1' };
         one.conf.envList = [];
+        one.conf.uLimitList = [];
         one.conf.portList = [];
         one.conf.dirVolumeList = [];
         one.conf.fileVolumeList = [];
