@@ -17,29 +17,13 @@ groovy -cp dist\*:src:resources src/RunServer.groovy
 
 TIPS: By default, dms use h2 database and data file is /var/dms/data*, and dms will create tables when first run. DDL refer init_h2.sql
 
+### 3. View web ui and login using any username and password
 
-### 3. Run nginx to deploy front web ui
+### 4. Update scripts using by node agent to database table
 
-Use nginx.conf and change root location: 
+first login, then open url: http://127.0.0.1:5000/dms/agent/script/update/batch
 
-```
-        location / {
-            root   /ws/dms/www;
-            index  index.html index.htm;
-        }
-
-        location /dms {
-            proxy_pass   http://127.0.0.1:5000;
-        }
-```
-
-### 4. View web ui and login using any username and password
-
-### 5. Update scripts using by node agent to database table
-
-first login, then open url: http://nginx/dms/agent/script/update/batch
-
-### 6. Create first cluster in web ui
+### 5. Create first cluster in web ui
 
 
 ### Others: Change if you need use another database server
@@ -59,11 +43,11 @@ db.password=***
 
 ## Deply a node
 
-### 7. Install docker/boot2docker, open -H 0.0.0.0:2376
+### 6. Install docker/boot2docker, open -H 0.0.0.0:2376
 
-### 8. change src/conf.properties
+### 7. change src/conf.properties
 
-### 9. Run using groovy command(You need download groovy 2.4.x+ local)
+### 8. Run using groovy command(You need download groovy 2.4.x+ local)
 
 ```
 cd dms

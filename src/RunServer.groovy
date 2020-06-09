@@ -65,6 +65,7 @@ guardian.start()
 def server = RouteServer.instance
 server.loader = RouteRefreshLoader.create(loader.gcl).addClasspath(srcDirPath).addClasspath(resourceDirPath).
         addDir(c.projectPath('/src/ctrl'))
+server.webRoot = c.projectPath('/www')
 server.start()
 
 Utils.stopWhenConsoleQuit {
