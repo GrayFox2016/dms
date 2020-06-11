@@ -86,14 +86,15 @@ h.group('/node') {
         def type = req.param('type')
         def queueType = req.param('queueType')
         def containerId = req.param('containerId')
+        def gaugeName = req.param('gaugeName')
         assert nodeIp && type
 
-        def p = [type: type, queueType: queueType, containerId: containerId]
+        def p = [type: type, queueType: queueType, containerId: containerId, gaugeName: gaugeName]
         if (containerId) {
             def appId = InMemoryAllContainerManager.instance.getAppIpByContainerId(containerId)
             p.appId = appId
             if ('container' == queueType) {
-                def appOne = new AppDTO(id: appId).one() as AppDTO
+                def appOne = new AppDTO(id: appId).queryFields('monitor_conf').one() as AppDTO
                 if (!appOne.monitorConf) {
                     resp.halt(500, 'this app is not config monitor')
                 }
@@ -101,6 +102,21 @@ h.group('/node') {
         }
 
         resp.end AgentCaller.instance.get(nodeIp, '/dmc/metric/queue', p)
+    }.get('/metric/gauge/name/list') { req, resp ->
+        def nodeIp = req.param('nodeIp')
+        def containerId = req.param('containerId')
+        assert nodeIp && containerId
+
+        def appId = InMemoryAllContainerManager.instance.getAppIpByContainerId(containerId)
+
+        def p = [:]
+        p.appId = appId
+        def appOne = new AppDTO(id: appId).queryFields('monitor_conf').one() as AppDTO
+        if (!appOne.monitorConf) {
+            resp.halt(500, 'this app is not config monitor')
+        }
+
+        resp.end AgentCaller.instance.get(nodeIp, '/dmc/metric/gauge/name/list', p)
     }
 }
 

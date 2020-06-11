@@ -486,7 +486,7 @@ $(function () {
                     var chartOption = {
                         title: {
                             text: opts.title, textStyle: {
-                                color: 'white',
+                                color: 'blue',
                             },
                             left: 'center'
                         }, series: series, xAxis: [{
@@ -501,9 +501,9 @@ $(function () {
                                 }
                             },
                             axisLabel: {
-                                show: true,
+                                show: false,
                                 fontSize: 12,
-                                color: 'white'
+                                color: 'blue'
                             },
                             data: val.xData
                         }], yAxis: [{
@@ -518,7 +518,7 @@ $(function () {
                             },
                             axisLabel: {
                                 show: true,
-                                color: 'white',
+                                color: 'blue',
                                 fontSize: 12
                             },
                             splitNumber: 10,

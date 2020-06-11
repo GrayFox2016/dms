@@ -204,8 +204,8 @@
 </script>
 
 
-<script type="text/x-template"
-ui-dialog="{showModel: 'ctrl.isShowContainerStats', title: 'Container Stats', dialogId: 'dialogContainerStats', lock: true, fixPosition: true, fixed: true, ext: {max: false}}">
+	<script type="text/x-template"
+		ui-dialog="{showModel: 'ctrl.isShowContainerStats', title: 'Container Stats', dialogId: 'dialogContainerStats', lock: true, fixPosition: true, fixed: true, ext: {max: false}}">
 <div class="form-group" style="width: 1200px;">
 <span style="padding-left: 20px; margin-right: 20px;">Node Ip</span><span class="bg-info">{{tmp.targetContainer.Node_Ip}}</span>
 </div>
@@ -213,14 +213,26 @@ ui-dialog="{showModel: 'ctrl.isShowContainerStats', title: 'Container Stats', di
 <ul class="nav nav-tabs" ui-tabs="{beforeFn: 'changeContainerStatsTab'}">
 <li class="active"><a>Cpu Usage</a></li>
 <li><a>Memory Usage</a></li>
+<li><a>Guage Metric</a></li>
 </ul>
 <div class="tabs active">
 <div style="height: 400px; width: 1200px;"
-ui-chart-line="{scopeDataName: 'tmp.containerCpuChartData', name: 'Use Percent', title: 'Container Cpu Usage'}"></div>
+ui-chart-line="{scopeDataName: 'tmp.containerCpuChartData', name: 'Used Percent', title: 'Container Cpu Usage'}"></div>
 </div>
 <div class="tabs">
 <div style="height: 400px; width: 1200px;"
-ui-chart-line="{scopeDataName: 'tmp.containerMemChartData', name: 'Use Bytes', title: 'Container Memory Usage'}"></div>
+ui-chart-line="{scopeDataName: 'tmp.containerMemChartData', name: 'Used Bytes', title: 'Container Memory Usage'}"></div>
+</div>
+<div class="tabs">
+	<div class="form-group">
+		<label>reason: </label>
+		<select ng-model="tmp.gaugeName" ng-options="a for a in tmp.gaugeNameList"
+			style="width: 200px;" ng-change="getGaugeValueList()">
+			<option value="" selected>--/--</option>
+		</select>
+	</div>
+	<div style="height: 400px; width: 1200px;"
+		ui-chart-line="{scopeDataName: 'tmp.containerGaugeChartData', name: 'Value', title: 'Container Gauge Metric Collected'}"></div>
 </div>
 </script>
 

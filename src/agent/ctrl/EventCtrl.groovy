@@ -71,6 +71,8 @@ h.get('/metric/queue') { req, resp ->
                 map.instanceIndex == (instanceIndex as int)
             }
         }
+    } else {
+        ll = list
     }
 
     [timelineList: ll.collect {
@@ -93,6 +95,20 @@ h.get('/metric/queue') { req, resp ->
             } else if ('mem' == type) {
                 return it.memUsage
             }
+        } else if (queueType == Type.app.name()) {
+            def gaugeName = req.param('gaugeName')
+            if (!gaugeName) {
+                return 0
+            }
+            def val = it[gaugeName]
+            return val ? val as Double : 0
         }
     }]
+}.get('/metric/gauge/name/list') { req, resp ->
+    def appId = req.param('appId')
+    AgentTempInfoHolder.instance.appMetricGaugeNameSet[appId as int] ?: []
+}.get('/metric/app/clear') { req, resp ->
+    def appId = req.param('appId')
+    AgentTempInfoHolder.instance.clear([appId as int])
+    [flag: true]
 }

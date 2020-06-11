@@ -282,6 +282,7 @@ class Agent extends IntervalJob {
                 Map r = CachedGroovyClassLoader.instance.eval(conf.metricFormatScriptContent, variables) as Map
                 if (r) {
                     gauges = r
+                    gauges.containerId = container.id()
                     AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 } else {
                     addEvent Event.builder().type(Event.Type.node).reason('metric get fail').result('' + appId).
@@ -291,6 +292,7 @@ class Agent extends IntervalJob {
             } else {
                 if (bodyMetric.startsWith('{')) {
                     gauges = JSON.parseObject(bodyMetric)
+                    gauges.containerId = container.id()
                     AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 } else {
                     gauges = [:]
@@ -300,6 +302,7 @@ class Agent extends IntervalJob {
                             gauges[arr[0]] = arr[1]
                         }
                     }
+                    gauges.containerId = container.id()
                     AgentTempInfoHolder.instance.addAppMetric(appId, instanceIndex, gauges, bodyMetric)
                 }
             }

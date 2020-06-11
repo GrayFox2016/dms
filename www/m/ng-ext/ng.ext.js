@@ -694,22 +694,20 @@
 
 			// default rule / tips defination, of course you can overwrite
 			msgs: {
-				'r': '{0}不能为空',
-				'date': '{0}不正确的日期格式格式，日期格式应该为yyyy-MM-dd',
-				'time': '{0}不正确的时间格式，时间格式应该为hh:mm',
-				'datetime': '{0}不正确的时间格式，时间格式应该为yyyy-MM-dd hh:mm:ss',
+				'r': '{0} required',
+				'date': '{0} eg.yyyy-MM-dd',
+				'time': '{0} eg.hh:mm',
+				'datetime': '{0} eg.yyyy-MM-dd hh:mm:ss',
 
-				'int': '{0}必须为整数',
-				'posint': '{0}必须为正整数',
-				'float': '{0}必须为数字',
-				'float1': '{0}格式不正确(最多1位小数)',
-				'float2': '{0}格式不正确(最多2位小数)',
+				'int': '{0} integer required',
+				'posint': '{0} positive integer required',
+				'float': '{0} number required',
 
-				'minlen': '{0}字符数不到规定长度{1}',
-				'maxlen': '{0}字符数超过规定长度{1}',
-				'maxval': '{0}值超过上限{1}',
-				'minval': '{0}值小于下限{1}',
-				'tips.valid': '校验不通过'
+				'minlen': '{0} charlen < {1}',
+				'maxlen': '{0} charlen > {1}',
+				'maxval': '{0} value > {1}',
+				'minval': '{0} value < {1}',
+				'tips.valid': 'invalid value'
 			},
 
 			// default rule -> regex/function defination

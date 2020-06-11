@@ -153,7 +153,7 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
         if ($scope.ctrl.isShowJobLog) {
             $scope.showJobLogList();
         } else if ($scope.ctrl.isShowContainerStats) {
-            $scope.changeContainerStatsTab(statsTabIndexChoosed);
+            $scope.changeContainerStatsTab(statsTabIndexChoosed, -1, true);
         }
 
         if (tabIndexChoosed == 2) {
@@ -184,7 +184,7 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
     };
 
     var statsTabIndexChoosed;
-    $scope.changeContainerStatsTab = function (index, triggerIndex) {
+    $scope.changeContainerStatsTab = function (index, triggerIndex, isRefresh) {
         statsTabIndexChoosed = index;
         if (index == 0) {
             $http.get('/dms/node/metric/queue', {
@@ -210,7 +210,43 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
                 $scope.tmp.containerMemChartData = { data: data.list, xData: data.timelineList };
                 Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
             });
+        } else if (index == 2) {
+            if (!isRefresh) {
+                $http.get('/dms/node/metric/gauge/name/list', {
+                    params: {
+                        nodeIp: $scope.tmp.targetContainer.Node_Ip,
+                        containerId: $scope.tmp.targetContainer.Id
+                    }
+                }).success(function (data) {
+                    $scope.tmp.gaugeName = '';
+                    $scope.tmp.gaugeNameList = data;
+                    $scope.tmp.containerGaugeChartData = { data: [], xData: [] };
+                    Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+                });
+            } else {
+                $scope.getGaugeValueList();
+            }
         }
         return true;
+    };
+
+    $scope.getGaugeValueList = function () {
+        if (!$scope.tmp.gaugeName) {
+            $scope.tmp.containerGaugeChartData = { data: [], xData: [] };
+            return;
+        }
+
+        $http.get('/dms/node/metric/queue', {
+            params: {
+                nodeIp: $scope.tmp.targetContainer.Node_Ip,
+                containerId: $scope.tmp.targetContainer.Id,
+                queueType: 'app',
+                type: 'guage',
+                gaugeName: $scope.tmp.gaugeName
+            }
+        }).success(function (data) {
+            $scope.tmp.containerGaugeChartData = { data: data.list, xData: data.timelineList };
+            Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+        });
     };
 });

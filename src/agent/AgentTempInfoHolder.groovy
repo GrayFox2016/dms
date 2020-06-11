@@ -14,6 +14,7 @@ class AgentTempInfoHolder {
 
     LimitQueue<Map> nodeQueue
     ConcurrentHashMap<Integer, LimitQueue<Map>> appMetricQueues = new ConcurrentHashMap<>()
+    ConcurrentHashMap<Integer, Set<String>> appMetricGaugeNameSet = new ConcurrentHashMap<>()
     ConcurrentHashMap<Integer, LimitQueue<Map>> containerMetricQueues = new ConcurrentHashMap<>()
 
     private int queueSize = 2880
@@ -35,6 +36,10 @@ class AgentTempInfoHolder {
     }
 
     void addAppMetric(Integer appId, Integer instanceIndex, Map content, String body) {
+        def set = new HashSet(content.keySet())
+        set.remove('containerId')
+        appMetricGaugeNameSet[appId] = set
+
         content.time = new Date()
         content.type = Type.app.name()
         content.nodeIp = Agent.instance.nodeIp
@@ -74,5 +79,11 @@ class AgentTempInfoHolder {
         if (sender) {
             sender.send('' + appId, content)
         }
+    }
+
+    void clear(Integer appId) {
+        appMetricQueues.remove(appId)
+        appMetricGaugeNameSet.remove(appId)
+        containerMetricQueues.remove(appId)
     }
 }
