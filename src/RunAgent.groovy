@@ -32,13 +32,14 @@ if (Conf.isWindows()) {
         System.setProperty('DOCKER_CERT_PATH', 'C:\\Users\\kerry\\.docker\\machine\\machines\\default')
     }
     // boot2docker virtual box ip
-    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', '192.168.99.100')
+    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', '192.168.99.101')
 }
 agent.nodeIp = Utils.localIp()
 if (!agent.nodeIpDockerHost) {
     agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', agent.nodeIp)
 }
-agent.docker = DefaultDockerClient.fromEnv().uri(c.getString('dockerHostUri', 'https://192.168.99.100:2376')).build()
+def dockerHostUri = c.getString('dockerHostUri', 'https://' + agent.nodeIpDockerHost + ':2376')
+agent.docker = DefaultDockerClient.fromEnv().uri(dockerHostUri).build()
 agent.start()
 
 // script holder

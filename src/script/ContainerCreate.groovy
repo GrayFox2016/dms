@@ -125,7 +125,7 @@ conf.fileVolumeList.eachWithIndex { FileVolumeMount one, int i ->
         // dyn
         String hostFileFinal
         if (fileLocal.contains('${')) {
-            hostFileFinal = CachedGroovyClassLoader.instance.eval('"' + fileLocal + '"', [instanceIndex: createConf.instanceIndex])
+            hostFileFinal = CachedGroovyClassLoader.instance.eval('"' + fileLocal + '"', [appId: createConf.appId, instanceIndex: createConf.instanceIndex])
         } else {
             hostFileFinal = fileLocal
         }
@@ -156,8 +156,8 @@ conf.dirVolumeList.each {
     String dirMountFinal
     String hostDirFinal
     if (dirLocal.contains('${')) {
-        dirMountFinal = CachedGroovyClassLoader.instance.eval('"' + dirMount + '"', [instanceIndex: createConf.instanceIndex])
-        hostDirFinal = CachedGroovyClassLoader.instance.eval('"' + dirLocal + '"', [instanceIndex: createConf.instanceIndex])
+        dirMountFinal = CachedGroovyClassLoader.instance.eval('"' + dirMount + '"', [appId: createConf.appId, instanceIndex: createConf.instanceIndex])
+        hostDirFinal = CachedGroovyClassLoader.instance.eval('"' + dirLocal + '"', [appId: createConf.appId, instanceIndex: createConf.instanceIndex])
     } else {
         dirMountFinal = dirMount
         hostDirFinal = dirLocal

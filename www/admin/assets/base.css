@@ -228,3 +228,10 @@ p {
     text-align: center;
     background-color: #f2dede !important;
 }
+
+p.shell {
+    background-color: darkgray;
+    color: white;
+    border-style: dashed;
+    border-color: blue;
+}

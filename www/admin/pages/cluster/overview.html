@@ -132,7 +132,9 @@
 												<p class="bg-info">{{x.Node_Ip}}</p>
 											</td>
 											<td>{{x.Image}}</td>
-											<td>{{x.Command}}</td>
+											<td>
+												<p class="shell">{{x.Command}}</p>
+											</td>
 											<td>
 												<p
 													ng-class="{'bg-info': 'running' == x.State, 'bg-success': 'created' == x.State, 'bg-danger': 'exited' == x.State}">
