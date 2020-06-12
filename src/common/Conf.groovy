@@ -29,6 +29,16 @@ class Conf {
     Map<String, String> params = [:]
 
     Conf loadArgs(String[] args) {
+        def confFile = new File(projectPath('/src/conf.properties'))
+        if (confFile.exists()) {
+            confFile.readLines().findAll { it.trim() && !it.startsWith('#') }.each {
+                def arr = it.split('=')
+                if (arr.length == 2) {
+                    params[arr[0]] = arr[1]
+                }
+            }
+        }
+
         if (!args) {
             return this
         }
@@ -37,16 +47,6 @@ class Conf {
             def arr = arg.split('=')
             if (arr.size() == 2) {
                 params[arr[0]] = arr[1]
-            }
-        }
-
-        def confFile = new File(projectPath('/conf.properties'))
-        if (confFile.exists()) {
-            confFile.readLines().findAll { it.trim() && !it.startsWith('#') }.each {
-                def arr = it.split('=')
-                if (arr.length == 2) {
-                    params[arr[0]] = arr[1]
-                }
             }
         }
         this

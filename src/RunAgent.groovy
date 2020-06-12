@@ -26,18 +26,9 @@ agent.secret = c.getString('secret', '1')
 agent.auth()
 agent.scriptAgentCollectSet << 'node base info'
 agent.sigar = new Sigar()
-
-if (Conf.isWindows()) {
-    if (!System.getProperty('DOCKER_CERT_PATH')) {
-        System.setProperty('DOCKER_CERT_PATH', 'C:\\Users\\kerry\\.docker\\machine\\machines\\default')
-    }
-    // boot2docker virtual box ip
-    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', '192.168.99.101')
-}
 agent.nodeIp = Utils.localIp()
-if (!agent.nodeIpDockerHost) {
-    agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', agent.nodeIp)
-}
+agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', agent.nodeIp)
+
 def dockerHostUri = c.getString('dockerHostUri', 'https://' + agent.nodeIpDockerHost + ':2376')
 agent.docker = DefaultDockerClient.fromEnv().uri(dockerHostUri).build()
 agent.start()
