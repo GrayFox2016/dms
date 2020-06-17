@@ -65,7 +65,7 @@ create table image_tpl (
     des varchar(200),
     tpl_type varchar(20),
     mount_dist varchar(200),
-    is_parent_dir_mount bit,
+    is_parent_dir_mount int,
     content text,
     params text,
     updated_date timestamp default current_timestamp
@@ -93,7 +93,7 @@ create table app (
     ab_conf varchar(2000),
     job_conf varchar(2000),
     live_check_conf varchar(2000),
-    status tinyint,
+    status int,
     updated_date timestamp default current_timestamp
 );
 create index idx_app_cluster_id on app(cluster_id);
@@ -164,8 +164,8 @@ create table gw_cluster (
     name varchar(50),
     des varchar(200),
     server_url varchar(200),
-    server_port tinyint,
-    dashboard_port tinyint,
+    server_port int,
+    dashboard_port int,
     zk_node varchar(200),
     prefix varchar(50),
     created_date timestamp,

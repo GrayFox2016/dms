@@ -1,6 +1,8 @@
 package vendor
 
 import auth.LoginService
+import auth.Permit
+import auth.PermitType
 import auth.User
 import com.github.kevinsawicki.http.HttpRequest
 import common.Conf
@@ -24,7 +26,7 @@ class MyLoginService implements LoginService {
             }
             def list = new UserPermitDTO(user: user).loadList(10) as List<UserPermitDTO>
             u.permitList.addAll(list.collect {
-                new User.Permit(User.PermitType.valueOf(it.permitType), it.resourceId)
+                new Permit(PermitType.valueOf(it.permitType), it.resourceId)
             })
             return u
         } else {

@@ -10,22 +10,6 @@ class User {
     public static final Permit PermitImageManager = new Permit(PermitType.imageManager)
     public static final User Admin = new User(permitList: [PermitAdmin])
 
-    @CompileStatic
-    static class Permit {
-        PermitType type
-
-        int id
-
-        Permit(PermitType type, int id = 0) {
-            this.type = type
-            this.id = id
-        }
-    }
-
-    static enum PermitType {
-        admin, cluster, namespace, app, imageManager
-    }
-
     String name
 
     Date lastLoginTime = new Date()

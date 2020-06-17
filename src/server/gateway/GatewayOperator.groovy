@@ -17,6 +17,7 @@ import model.json.GwBackendServer
 import model.json.GwFrontendRuleConf
 import model.json.KVPair
 import server.scheduler.ContainerRunResult
+import spi.SpiSupport
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -165,7 +166,16 @@ class GatewayOperator {
                     result('' + frontend.name).build().log(backend.serverList.toString()).toDto().add()
 
             frontend.update()
-            r = updateFrontend(frontend, waitUntilListenTrigger)
+
+            def lock = SpiSupport.createLock()
+            lock.lockKey = 'opt frontend ' + conf.frontendId
+            boolean isDone = lock.exe {
+                r = updateFrontend(frontend, waitUntilListenTrigger)
+            }
+            if (!isDone) {
+                log.info 'get opt frontend lock fail - ' + conf.frontendId
+                r = false
+            }
         } else {
             r = true
         }
@@ -177,7 +187,7 @@ class GatewayOperator {
         list << new KVPair<String>(key: path, value: value.toString())
     }
 
-    private static boolean deleteRecursive(ZkClient zk, String path) {
+    private synchronized static boolean deleteRecursive(ZkClient zk, String path) {
         if (!zk.exists(path)) {
             return true
         }

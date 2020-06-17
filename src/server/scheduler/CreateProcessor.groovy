@@ -301,8 +301,7 @@ class CreateProcessor implements GuardianProcessor {
                                          List<String> nodeIpList, String nodeIp, AppConf conf, JobStepKeeper passedKeeper = null) {
         def registryOne = new ImageRegistryDTO(id: conf.registryId).one() as ImageRegistryDTO
         assert registryOne
-        def imageWithoutTag = registryOne.trimScheme() + '/' + conf.group + '/' + conf.image
-        def imageWithTag = imageWithoutTag + ':' + conf.tag
+        def imageWithTag = registryOne.trimScheme() + '/' + conf.group + '/' + conf.image + ':' + conf.tag
 
         def keeper = passedKeeper ?: new JobStepKeeper(jobId: jobId, instanceIndex: instanceIndex, nodeIp: nodeIp)
         keeper.next(JobStepKeeper.Step.chooseNode, nodeIpList.toString())
@@ -354,7 +353,7 @@ class CreateProcessor implements GuardianProcessor {
         Map<String, Object> evalP = [:]
         evalP.createContainerConf = createContainerConf
 
-        def tplList = new ImageTplDTO(imageName: imageWithoutTag).loadList() as List<ImageTplDTO>
+        def tplList = new ImageTplDTO(imageName: conf.group + '/' + conf.image).loadList() as List<ImageTplDTO>
         def preList = tplList.findAll { it.tplType == ImageTplDTO.TplType.checkPre.name() }
         def initList = tplList.findAll { it.tplType == ImageTplDTO.TplType.init.name() }
         def afterList = tplList.findAll { it.tplType == ImageTplDTO.TplType.checkAfter.name() }
@@ -416,7 +415,7 @@ class CreateProcessor implements GuardianProcessor {
                             [id: containerId, initCmd: initCmd])
                     Boolean isErrorInit = initR.getBoolean('isError')
                     if (isErrorInit && isErrorInit.booleanValue()) {
-                        throw new JobProcessException('init container fail - ' + imageWithoutTag + ' - ' + initR.getString('message'))
+                        throw new JobProcessException('init container fail - ' + conf.group + '/' + conf.image + ' - ' + initR.getString('message'))
                     }
                     keeper.next(JobStepKeeper.Step.initContainer, 'done ' + init.name + ' - ' + initCmd + ' - ' +
                             initR.getString('message'))

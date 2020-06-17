@@ -10,9 +10,9 @@ class DefaultLoginService implements LoginService {
         def u = new User(name: user)
         def list = new UserPermitDTO(user: user).loadList(10) as List<UserPermitDTO>
         u.permitList.addAll(list.collect {
-            new User.Permit(User.PermitType.valueOf(it.permitType), it.resourceId)
+            new Permit(PermitType.valueOf(it.permitType), it.resourceId)
         })
-        if (user == User.PermitType.admin.name()) {
+        if (user == PermitType.admin.name()) {
             u.permitList << User.PermitAdmin
         }
         u

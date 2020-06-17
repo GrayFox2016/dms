@@ -1,5 +1,7 @@
 package server
 
+import auth.Permit
+import auth.PermitType
 import auth.User
 import com.alibaba.fastjson.JSONObject
 import common.ContainerHelper
@@ -134,18 +136,18 @@ class InMemoryAllContainerManager extends IntervalJob implements AllContainerMan
         if (user) {
             def userAccessAppIdSet = new HashSet<Integer>()
             user.permitList.each {
-                if (it.type == User.PermitType.cluster) {
+                if (it.type == PermitType.cluster) {
                     def list = new AppDTO(clusterId: it.id).queryFields('id').loadList() as List<AppDTO>
                     userAccessAppIdSet.addAll(list.collect { it.id })
                 }
-                if (it.type == User.PermitType.namespace) {
+                if (it.type == PermitType.namespace) {
                     def list = new AppDTO(namespaceId: it.id).queryFields('id').loadList() as List<AppDTO>
                     userAccessAppIdSet.addAll(list.collect { it.id })
                 }
             }
             if (userAccessAppIdSet) {
                 for (userAccessAppId in userAccessAppIdSet) {
-                    user.permitList << new User.Permit(User.PermitType.app, userAccessAppId)
+                    user.permitList << new Permit(PermitType.app, userAccessAppId)
                 }
             }
         }

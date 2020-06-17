@@ -222,7 +222,16 @@ class Guardian extends IntervalJob {
 
                 // check gateway
                 def operator = GatewayOperator.create(app.id, gatewayConf)
-                List<String> runningServerUrlList = list.collect { x ->
+                List<String> runningServerUrlList = list.findAll { x ->
+                    def id = getContainerId(x)
+                    def nodeIp = getNodeIp(x)
+
+                    def p = [id: id]
+                    def r = AgentCaller.instance.agentScriptExe(nodeIp, 'container inspect', p)
+                    def containerInspectInfo = r.getJSONObject('container')
+                    def state = containerInspectInfo.getJSONObject('State').getString('Status')
+                    'running' == state
+                }.collect { x ->
                     def nodeIpDockerHost = getNodeIpDockerHost(x)
                     def publicPort = getPublicPort(gatewayConf.containerPrivatePort, x)
                     GatewayOperator.scheme(nodeIpDockerHost, publicPort)
