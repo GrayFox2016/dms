@@ -66,6 +66,9 @@ h.group('/agent/script') {
 
         def scriptFileList = new File(Conf.instance.projectPath('/src/script')).listFiles()
         scriptFileList.each { f ->
+            if (f.isDirectory()) {
+                return
+            }
             String scriptName = org.segment.d.D.toUnderline(f.name.split(/\./)[0]).replaceAll('_', ' ')
             if (scriptNameGiven && scriptNameGiven != scriptName) {
                 return

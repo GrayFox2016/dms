@@ -5,8 +5,7 @@ import groovy.transform.CompileStatic
 import org.segment.d.Ds
 
 @CompileStatic
-class DefaultLocalH2DataSourceCreator implements DataSourceCreator {
-    @Override
+class DefaultLocalH2DataSourceCreator {
     Ds create() {
         def c = Conf.instance
 

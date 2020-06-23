@@ -21,5 +21,7 @@ h.exceptionHandler { req, resp, t ->
         resp.halt(500, 'agent send node info fail')
     } else if (!instance.isSendContainerInfoOk) {
         resp.halt(500, 'agent send container info fail')
+    } else {
+        'ok'
     }
 }

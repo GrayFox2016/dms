@@ -1,6 +1,7 @@
 import common.Conf
+import common.Const
 import common.Utils
-import conf.DataSourceCreator
+import conf.DefaultLocalH2DataSourceCreator
 import org.segment.d.D
 import org.segment.d.MySQLDialect
 import org.segment.web.RouteRefreshLoader
@@ -12,7 +13,6 @@ import server.InMemoryAllContainerManager
 import server.dns.EtcdClientHolder
 import server.gateway.ZkClientHolder
 import server.scheduler.Guardian
-import spi.SpiSupport
 
 import java.sql.Types
 
@@ -30,14 +30,13 @@ def resourceDirPath = c.projectPath('/resources')
 
 // groovy class loader init
 def loader = CachedGroovyClassLoader.instance
-loader.init(this.getClass().classLoader, srcDirPath + ':' + resourceDirPath)
+loader.init(Guardian.instance.class.classLoader, srcDirPath + ':' + resourceDirPath)
 
 // chain filter uri prefix set
 ChainHandler.instance.uriPre('/dms')
 
 // DB
-DataSourceCreator creator = SpiSupport.createDataSourceCreator()
-def ds = creator.create().cacheAs()
+def ds = new DefaultLocalH2DataSourceCreator().create().cacheAs()
 def d = new D(ds, new MySQLDialect())
 // check if need create table first
 def tableNameList = d.query('show tables', String).collect { it.toUpperCase() }
@@ -66,13 +65,13 @@ def server = RouteServer.instance
 server.loader = RouteRefreshLoader.create(loader.gcl).addClasspath(srcDirPath).addClasspath(resourceDirPath).
         addDir(c.projectPath('/src/ctrl'))
 server.webRoot = c.projectPath('/www')
-server.start()
+server.start(Const.SERVER_HTTP_LISTEN_PORT)
 
 Utils.stopWhenConsoleQuit {
     server.stop()
     guardian.stop()
     manager.stop()
     ds.closeConnect()
-    EtcdClientHolder.instance.close()
     ZkClientHolder.instance.close()
+    EtcdClientHolder.instance.close()
 }

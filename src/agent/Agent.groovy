@@ -148,18 +148,23 @@ class Agent extends IntervalJob {
 
     List<Container> sendContainer() {
         def containers = docker.listContainers(DockerClient.ListContainersParam.allContainers())
+        // avoid old dms version naming conflict
+        def list = containers.findAll { x ->
+            def names = x.names()
+            !names.any { it.contains(CONTAINER_NAME_PRE) && it.contains('_instance') }
+        }
 
         Map r = [:]
         r.nodeIp = nodeIp
         r.nodeIpDockerHost = nodeIpDockerHost
         r.clusterId = clusterId
-        r.containers = JsonWriter.instance.json(containers)
+        r.containers = JsonWriter.instance.json(list)
 
         isSendContainerInfoOk = true
         post('/dms/api/hb/container', r, String) { body ->
             isSendContainerInfoOk = false
         }
-        containers
+        list
     }
 
     private void liveCheckAndCollectMetric(List<Container> containers) {

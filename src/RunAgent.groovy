@@ -40,7 +40,7 @@ scriptHolder.start()
 
 // groovy class loader init
 def loader = CachedGroovyClassLoader.instance
-loader.init(this.getClass().classLoader, srcDirPath)
+loader.init(agent.class.classLoader, srcDirPath)
 
 // chain filter uri prefix set
 ChainHandler.instance.uriPre('/dmc')

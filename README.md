@@ -27,7 +27,7 @@ login.url=http://server/login
 
 You can also create a class implements LoginService in package vendor to use your login service, remember change ${projectRoot}/resources/META-INFO/services/auth.LoginService
 
-TIPS: DMS use SPI to support user define datasource/login service/distributed lock etc.
+TIPS: DMS use SPI to support user define login service/distributed lock/scale strategy etc.
 
 ### 4. Update scripts using by node agent to database table.
 
@@ -47,8 +47,6 @@ db.password=***
 db.minPoolSize=5
 db.maxPoolSize=10
 ```
-
-You can also create a class implements DataSourceCreator in package vendor to use your database server.
 
 ## Deploy a node agent:
 

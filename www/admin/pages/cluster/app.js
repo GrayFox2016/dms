@@ -115,10 +115,14 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid) {
         $scope.tmp.nodeIpAllList = data.nodeIpList;
         $scope.tmp.registryList = data.registryList;
         if (data.clusterList.length) {
-            $scope.tmp.clusterId = params.clusterId || data.clusterList[0].id;
+            if (!$scope.tmp.clusterId) {
+                $scope.tmp.clusterId = params.clusterId || data.clusterList[0].id;
+            }
             $scope.onClusterChoose();
-            $scope.tmp.namespaceId = params.namespaceId ||
-                ($scope.tmp.namespaceList.length ? $scope.tmp.namespaceList[0].id : '');
+            if (!$scope.tmp.namespaceId) {
+                $scope.tmp.namespaceId = params.namespaceId ||
+                    ($scope.tmp.namespaceList.length ? $scope.tmp.namespaceList[0].id : '');
+            }
             $scope.queryLl();
         }
     });
