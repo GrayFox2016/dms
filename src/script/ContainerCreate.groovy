@@ -115,6 +115,7 @@ conf.fileVolumeList.eachWithIndex { FileVolumeMount one, int i ->
              nodeIpDockerHost    : createConf.nodeIpDockerHost,
              nodeIpList          : createConf.nodeIpList,
              nodeIpDockerHostList: createConf.nodeIpDockerHostList,
+             targetNodeIpList    : createConf.conf.targetNodeIpList,
              instanceIndex       : createConf.instanceIndex,
              containerNumber     : conf.containerNumber,
              allAppLogDir        : createConf.globalEnvConf.allAppLogDir,
