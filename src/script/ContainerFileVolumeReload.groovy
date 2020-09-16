@@ -58,13 +58,18 @@ conf.fileVolumeList.findAll { it.isReloadInterval }.each { FileVolumeMount one -
         } else {
             FileUtils.forceMkdirParent(localFile)
             localFile.text = content
+
+            Agent.instance.addEvent Event.builder().type(Event.Type.node).reason('file volume reload').result('app ' + createConf.appId).
+                    build().log(content)
         }
     } else {
         def container = docker.inspectContainer(containerId)
         def mount = container.mounts().find { it.destination() == one.dist }
         if (mount) {
             String hostFilePath = mount.source()
-            def localFile = new File(hostFilePath)
+            String fileLocal = Conf.isWindows() ? hostFilePath.replace('/c/Users/', 'C:/Users/') : hostFilePath
+
+            def localFile = new File(fileLocal)
             if (localFile.exists() && localFile.text == content) {
                 // skip
                 log.info 'skip file volume reload  - ' + hostFilePath
@@ -72,12 +77,12 @@ conf.fileVolumeList.findAll { it.isReloadInterval }.each { FileVolumeMount one -
                 FileUtils.forceMkdirParent(localFile)
                 localFile.text = content
                 Utils.setFileRead(localFile)
+
+                Agent.instance.addEvent Event.builder().type(Event.Type.node).reason('file volume reload').result('app ' + createConf.appId).
+                        build().log(content)
             }
         }
     }
-
-    Agent.instance.addEvent Event.builder().type(Event.Type.node).reason('file volume reload').result('app ' + createConf.appId).
-            build().log(content)
 }
 
 [flag: true]
