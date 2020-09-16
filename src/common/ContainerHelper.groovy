@@ -8,6 +8,7 @@ import groovy.transform.CompileStatic
 class ContainerHelper {
     static final String KEY_ID = 'Id'
     static final String KEY_NODE_IP = 'Node_Ip'
+    static final String KEY_NODE_IP_LIST = 'Node_Ip_List'
     static final String KEY_NODE_IP_DOCKER_HOST = 'Node_Ip_Docker_Host'
     static final String KEY_CLUSTER_ID = 'Cluster_Id'
     static final String KEY_APP_ID = 'App_Id'
@@ -36,6 +37,17 @@ class ContainerHelper {
 
     static String getNodeIp(JSONObject x) {
         x.getString(KEY_NODE_IP)
+    }
+
+    static List<String> getNodeIpList(JSONObject x) {
+        List<String> r = []
+        String val = x.getString(KEY_NODE_IP_LIST)
+        if (val) {
+            val.split(',').each { String it ->
+                r << it
+            }
+        }
+        r
     }
 
     static String getNodeIpDockerHost(JSONObject x) {

@@ -2,7 +2,6 @@ package server.scheduler
 
 import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.JSONObject
-import common.Conf
 import ex.JobProcessException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -14,9 +13,10 @@ import org.segment.d.json.JsonWriter
 import org.segment.web.common.CachedGroovyClassLoader
 import server.AgentCaller
 import server.InMemoryAllContainerManager
-import server.dns.DnsOperator
-import server.dns.EtcdClientHolder
 import server.gateway.GatewayOperator
+
+//import server.dns.DnsOperator
+//import server.dns.EtcdClientHolder
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
@@ -215,6 +215,9 @@ class CreateProcessor implements GuardianProcessor {
                 def otherApp = otherAppCached[otherAppId]
                 if (!otherApp) {
                     def appOne = new AppDTO(id: otherAppId).queryFields('conf').one() as AppDTO
+                    if (!appOne) {
+                        throw new JobProcessException('app not define for id - ' + otherAppId)
+                    }
                     otherAppCached[otherAppId] = appOne
                     return new ContainerResourceAsk(appOne.conf)
                 } else {
@@ -297,6 +300,34 @@ class CreateProcessor implements GuardianProcessor {
         keeper
     }
 
+    static CreateContainerConf prepareCreateContainerConf(AppConf conf, Integer clusterId, Integer appId, Integer instanceIndex,
+                                                          String nodeIp, List<String> nodeIpList, String imageWithTag = null) {
+        if (imageWithTag == null) {
+            def registryOne = new ImageRegistryDTO(id: conf.registryId).one() as ImageRegistryDTO
+            assert registryOne
+            imageWithTag = registryOne.trimScheme() + '/' + conf.group + '/' + conf.image + ':' + conf.tag
+        }
+
+        def createContainerConf = new CreateContainerConf()
+        createContainerConf.conf = conf
+        createContainerConf.clusterId = clusterId
+        createContainerConf.appId = appId
+        createContainerConf.nodeIp = nodeIp
+        createContainerConf.nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
+        createContainerConf.instanceIndex = instanceIndex
+        createContainerConf.nodeIpList = nodeIpList
+        createContainerConf.nodeIpDockerHostList = nodeIpList.collect {
+            InMemoryAllContainerManager.instance.getNodeIpDockerHost(it)
+        }
+        createContainerConf.imageWithTag = imageWithTag
+
+        def cluster = new ClusterDTO(id: clusterId).one() as ClusterDTO
+        createContainerConf.globalEnvConf = cluster.globalEnvConf
+        def appList = new AppDTO(clusterId: clusterId).loadList() as List<AppDTO>
+        createContainerConf.appIdList = appList.collect { it.id }
+        createContainerConf
+    }
+
     ContainerRunResult startOneContainer(int clusterId, int appId, int jobId, int instanceIndex,
                                          List<String> nodeIpList, String nodeIp, AppConf conf, JobStepKeeper passedKeeper = null) {
         def registryOne = new ImageRegistryDTO(id: conf.registryId).one() as ImageRegistryDTO
@@ -331,23 +362,7 @@ class CreateProcessor implements GuardianProcessor {
             keeper.next(JobStepKeeper.Step.pullImage, 'skip pulled image ' + imageWithTag)
         }
 
-        def createContainerConf = new CreateContainerConf()
-        createContainerConf.conf = conf
-        createContainerConf.clusterId = clusterId
-        createContainerConf.appId = appId
-        createContainerConf.nodeIp = nodeIp
-        createContainerConf.nodeIpDockerHost = InMemoryAllContainerManager.instance.getNodeIpDockerHost(nodeIp)
-        createContainerConf.instanceIndex = instanceIndex
-        createContainerConf.nodeIpList = nodeIpList
-        createContainerConf.nodeIpDockerHostList = nodeIpList.collect {
-            InMemoryAllContainerManager.instance.getNodeIpDockerHost(it)
-        }
-        createContainerConf.imageWithTag = imageWithTag
-
-        def cluster = new ClusterDTO(id: clusterId).one() as ClusterDTO
-        createContainerConf.globalEnvConf = cluster.globalEnvConf
-        def appList = new AppDTO(clusterId: clusterId).loadList() as List<AppDTO>
-        createContainerConf.appIdList = appList.collect { it.id }
+        def createContainerConf = prepareCreateContainerConf(conf, clusterId, appId, instanceIndex, nodeIp, nodeIpList, imageWithTag)
         log.info createContainerConf.toString()
 
         Map<String, Object> evalP = [:]
@@ -371,6 +386,8 @@ class CreateProcessor implements GuardianProcessor {
         }
 
         // node volume conflict check
+        def cluster = new ClusterDTO(id: clusterId).one() as ClusterDTO
+        def appList = new AppDTO(clusterId: clusterId).loadList() as List<AppDTO>
         def skipVolumeDirSet = cluster.globalEnvConf.skipConflictCheckVolumeDirList.collect { it.value.toString() }
         def otherAppMountVolumeDirList = appList.findAll { it.id != appId }.collect { app ->
             app.conf.dirVolumeList.collect { it.dir }.findAll { !(it in skipVolumeDirSet) }
@@ -399,13 +416,13 @@ class CreateProcessor implements GuardianProcessor {
         keeper.next(JobStepKeeper.Step.startContainer, 'id: ' + containerId)
 
         // update dns
-        if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
-            def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
-            def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
-            boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).
-                    put(generateContainerHostname(appId, instanceIndex), nodeIp, dnsTtl)
-            keeper.next(JobStepKeeper.Step.updateDns, 'done update dns record - ' + isOk)
-        }
+//        if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
+//            def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
+//            def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
+//            boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).
+//                    put(generateContainerHostname(appId, instanceIndex), nodeIp, dnsTtl)
+//            keeper.next(JobStepKeeper.Step.updateDns, 'done update dns record - ' + isOk)
+//        }
 
         if (initList) {
             for (init in initList) {

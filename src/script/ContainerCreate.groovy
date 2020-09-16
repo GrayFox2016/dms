@@ -41,6 +41,7 @@ createConf.globalEnvConf.envList.each {
 envList << new KVPair(key: KEY_APP_ID, value: createConf.appId)
 envList << new KVPair(key: KEY_CLUSTER_ID, value: createConf.clusterId)
 envList << new KVPair(key: KEY_NODE_IP, value: createConf.nodeIp)
+envList << new KVPair(key: KEY_NODE_IP_LIST, value: createConf.nodeIpList.join(','))
 envList << new KVPair(key: KEY_NODE_IP_DOCKER_HOST, value: createConf.nodeIpDockerHost)
 envList << new KVPair(key: KEY_INSTANCE_INDEX, value: createConf.instanceIndex)
 

@@ -546,7 +546,10 @@
 				ng-options="a.id as a.name + ' - ' + a.des for a in tmp.imageTplList">
 			</select></span>
 			<span>Dist File Path&nbsp;<input type="text" disabled ng-model="param.dist" style="width: 200px;" ui-valid="r dir" /></span>
-			<span>Is Parent Dir Mount&nbsp;{{param.isParentDirMount == '1' ? 'Yes' : 'No'}}</span>
+			<br />
+			<span>Is Reload Interval&nbsp;<input type="checkbox" ng-model="param.isReloadInterval" /></span>&nbsp;&nbsp;
+			<span>Is Parent Dir Mount&nbsp; - <b style="color: blue;">{{param.isParentDirMount == '1' ? 'Yes' : 'No'}}</b></span>
+			<br />
 			<span style="margin-left: 20px;">
 				<button class="btn" ng-click="editOne.conf.fileVolumeList.remove(param)">-</button>
 			</span>

@@ -10,14 +10,16 @@ import groovy.util.logging.Slf4j
 import model.*
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.segment.d.D
+import org.segment.d.json.JsonWriter
 import server.AgentCaller
 import server.InMemoryAllContainerManager
-import server.dns.DnsOperator
-import server.dns.EtcdClientHolder
 import server.gateway.GatewayOperator
 import spi.SpiSupport
 
 import static common.ContainerHelper.*
+
+//import server.dns.DnsOperator
+//import server.dns.EtcdClientHolder
 
 @CompileStatic
 @Singleton
@@ -30,7 +32,7 @@ class Guardian extends IntervalJob {
 
     @Override
     void doJob() {
-        int minAgentHeartBeatNodeIpSize = Conf.instance.getInt('minAgentHeartBeatNodeIpSize', 10)
+        int minAgentHeartBeatNodeIpSize = Conf.instance.getInt('minAgentHeartBeatNodeIpSize', 5)
         if (agentHeartBeatNodeIpList.size() < minAgentHeartBeatNodeIpSize) {
             log.warn 'wait more agent heart beat - ' + agentHeartBeatNodeIpList.size()
             return
@@ -199,19 +201,38 @@ class Guardian extends IntervalJob {
                 isRunning(x)
             }
 
-            // update dns
-            if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
-                if (intervalCount % 10 == 0) {
-                    def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
-                    def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
-                    for (x in list) {
-                        boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).put(
-                                generateContainerHostname(app.id, getAppInstanceIndex(x)),
-                                getNodeIpDockerHost(x), dnsTtl)
-                        log.info 'done update dns record - ' + app.name + ' - ' + isOk
-                    }
+            // reload file mount
+            def fileVolumeList = app.conf.fileVolumeList.findAll { it.isReloadInterval }
+            if (fileVolumeList) {
+                list.each { x ->
+                    def containerId = getContainerId(x)
+                    def instanceIndex = getAppInstanceIndex(x)
+                    def nodeIp = getNodeIp(x)
+                    def nodeIpList = getNodeIpList(x)
+
+                    def createContainerConf = CreateProcessor.prepareCreateContainerConf(app.conf, app.clusterId, app.id, instanceIndex,
+                            nodeIp, nodeIpList)
+
+                    def createP = [jsonStr: JsonWriter.instance.json(createContainerConf), containerId: containerId]
+                    def r = AgentCaller.instance.agentScriptExe(nodeIp, 'container file volume reload', createP)
+                    Event.builder().type(Event.Type.app).reason('container file volume reload').
+                            result('' + app.id).build().log(fileVolumeList.toString() + ' - ' + r.toString()).toDto().add()
                 }
             }
+
+            // update dns
+//            if (cluster.globalEnvConf.dnsEndpoints && cluster.globalEnvConf.dnsKeyPrefix) {
+//                if (intervalCount % 10 == 0) {
+//                    def dnsTtl = Conf.instance.getInt('dnsTtl', 3600)
+//                    def client = EtcdClientHolder.instance.create(cluster.globalEnvConf.dnsEndpoints)
+//                    for (x in list) {
+//                        boolean isOk = new DnsOperator(client, cluster.globalEnvConf.dnsKeyPrefix).put(
+//                                generateContainerHostname(app.id, getAppInstanceIndex(x)),
+//                                getNodeIpDockerHost(x), dnsTtl)
+//                        log.info 'done update dns record - ' + app.name + ' - ' + isOk
+//                    }
+//                }
+//            }
 
             def containerNumber = app.conf.containerNumber
             if (containerNumber == list.size()) {
