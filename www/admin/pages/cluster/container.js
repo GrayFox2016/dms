@@ -1,7 +1,7 @@
 var md = angular.module('module_cluster/container', ['base']);
 md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
     $scope.ctrl = {};
-    $scope.tmp = { targetIndex: 0 };
+    $scope.tmp = { targetIndex: 0, log: { tail: 100 } };
 
     var LocalStore = window.LocalStore;
     var store = new LocalStore(true);
@@ -247,6 +247,31 @@ md.controller('MainCtrl', function ($scope, $http, uiTips, uiValid, uiLog) {
         }).success(function (data) {
             $scope.tmp.containerGaugeChartData = { data: data.list, xData: data.timelineList };
             Page.fixCenter(lhgdialog.list['dialogContainerStats_1']);
+        });
+    };
+
+    $scope.showLog = function (one) {
+        if (!one) {
+            one = $scope.tmp.showConainerLogOne;
+        } else {
+            $scope.tmp.showConainerLogOne = one;
+        }
+        $scope.ctrl.isShowContainerLog = true;
+
+        var x = $scope.tmp.log.since;
+        var since;
+        if (x) {
+            since = parseInt(Date.parse2(x).getTime() / 1000);
+        } else {
+            var date = new Date();
+            $scope.tmp.log.since = new Date(date.getTime() - 3600 * 1000 * 24).format('yyyy-MM-dd HH:mm:ss');
+            since = parseInt(date.getTime() / 1000 - 24 * 3600);
+        }
+        var p = { params: { id: one.Id, tail: $scope.tmp.log.tail, since: since }, responseType: 'text' };
+        uiTips.loading();
+        $http.get('/dms/container/log', p).success(function (data) {
+            $scope.tmp.logMessage = data;
+            Page.fixCenter(lhgdialog.list['dialogContainerLog_1']);
         });
     };
 });

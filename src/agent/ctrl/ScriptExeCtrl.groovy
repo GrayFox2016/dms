@@ -26,6 +26,13 @@ h.options('/script/exe') { req, resp ->
 
     String scriptContent = ScriptHolder.instance.getContentByName(scriptName)
     assert scriptContent
-    CachedGroovyClassLoader.instance.eval(scriptContent,
+    def r = CachedGroovyClassLoader.instance.eval(scriptContent,
             [sigar: Agent.instance.sigar, docker: Agent.instance.docker, params: params])
+
+    boolean isBodyRaw = !!params.isBodyRaw
+    if (isBodyRaw) {
+        resp.end(r ? r.toString() : '')
+    } else {
+        return r
+    }
 }

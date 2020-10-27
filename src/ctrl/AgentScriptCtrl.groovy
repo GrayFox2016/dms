@@ -111,8 +111,8 @@ h.group('/agent/script') {
         def scriptName = params.scriptName
         assert nodeIp && scriptName
 
-        def r = AgentCaller.instance.agentScriptExe(nodeIp, scriptName, params)
-        resp.end r.toJSONString()
+        def r = AgentCaller.instance.agentScriptExeBody(nodeIp, scriptName, params)
+        resp.end r
     }
 }
 

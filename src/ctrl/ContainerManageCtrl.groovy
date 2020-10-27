@@ -282,5 +282,18 @@ h.group('/container') {
             r
         }
         simpleContainerList
+    }.get('/log') { req, resp ->
+        def id = req.param('id')
+        assert id
+        def nodeIp = InMemoryAllContainerManager.instance.getNodeIpByContainerId(id)
+        if (!nodeIp) {
+            resp.halt(500, 'no node ip get')
+        }
+
+        def since = req.param('since')
+        def tail = req.param('tail')
+        def r = AgentCaller.instance.agentScriptExeBody(nodeIp, 'container log viewer',
+                [id: id, since: since, tail: tail, isBodyRaw: 1])
+        resp.end r
     }
 }

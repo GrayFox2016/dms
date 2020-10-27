@@ -90,4 +90,11 @@ class AgentCaller {
         String body = post(nodeIp, '/dmc/script/exe', p, String, failCallback)
         JSONObject.parseObject(body)
     }
+
+    String agentScriptExeBody(String nodeIp, String scriptName, Map params = null, Closure failCallback = null) {
+        Map p = params ?: [:]
+        p.scriptName = scriptName
+        String body = post(nodeIp, '/dmc/script/exe', p, String, failCallback)
+        body
+    }
 }
