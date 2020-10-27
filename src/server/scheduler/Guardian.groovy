@@ -216,7 +216,7 @@ class Guardian extends IntervalJob {
                     def createP = [jsonStr: JsonWriter.instance.json(createContainerConf), containerId: containerId]
                     def r = AgentCaller.instance.agentScriptExe(nodeIp, 'container file volume reload', createP)
                     Event.builder().type(Event.Type.app).reason('container file volume reload').
-                            result('' + app.id).build().log(fileVolumeList.toString() + ' - ' + r.toString()).toDto().add()
+                            result('' + app.id).build().log(fileVolumeList.collect { it.dist }.join(',') + ' - ' + r.toString()).toDto().add()
                 }
             }
 
@@ -316,7 +316,7 @@ class Guardian extends IntervalJob {
                 return false
             }
 
-            def processor = Guardian.processors[job.jobType]
+            def processor = processors[job.jobType]
             processor.process(job, app, list)
 
             new AppJobDTO(id: job.id, status: AppJobDTO.Status.done.val, updatedDate: new Date()).update()

@@ -10,7 +10,7 @@ import org.segment.web.common.CachedGroovyClassLoader
 import org.segment.web.handler.ChainHandler
 import org.slf4j.LoggerFactory
 import server.InMemoryAllContainerManager
-import server.dns.EtcdClientHolder
+//import server.dns.EtcdClientHolder
 import server.gateway.ZkClientHolder
 import server.scheduler.Guardian
 
@@ -57,6 +57,7 @@ def manager = InMemoryAllContainerManager.instance
 manager.start()
 
 def guardian = Guardian.instance
+guardian.interval = c.getInt('guardian.intervalSeconds', 10)
 guardian.start()
 
 // create jetty server, load route define interval us{
@@ -73,5 +74,5 @@ Utils.stopWhenConsoleQuit {
     manager.stop()
     ds.closeConnect()
     ZkClientHolder.instance.close()
-    EtcdClientHolder.instance.close()
+//    EtcdClientHolder.instance.close()
 }

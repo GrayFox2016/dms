@@ -28,6 +28,7 @@ agent.scriptAgentCollectSet << 'node base info'
 agent.sigar = new Sigar()
 agent.nodeIp = Utils.localIp()
 agent.nodeIpDockerHost = c.getString('nodeIpDockerHost', agent.nodeIp)
+agent.interval = c.getInt('agent.intervalSeconds', 10)
 
 def dockerHostUri = c.getString('dockerHostUri', 'https://' + agent.nodeIpDockerHost + ':2376')
 agent.docker = DefaultDockerClient.fromEnv().uri(dockerHostUri).build()
