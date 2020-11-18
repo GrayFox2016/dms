@@ -26,7 +26,8 @@ h.before('/**') { req, resp ->
     if (uri.contains('/api/')) {
         return
     }
-    if (uri.endsWith('/login') || uri.endsWith('/logout') || uri.endsWith('/agent/auth')) {
+    if (uri.endsWith('/login') || uri.endsWith('/logout') ||
+            uri.endsWith('/agent/auth') || uri.endsWith('/hz')) {
         return
     }
 

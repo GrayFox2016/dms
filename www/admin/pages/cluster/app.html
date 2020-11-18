@@ -42,7 +42,8 @@
 								<br />
 								{{one.des}}
 								<br />
-								<p ng-class="{'bg-info': one.status == 0, 'bg-success': one.status == 1}">{{one.status == 0 ? 'auto' : 'manual'}}</p>
+								<p ng-class="{'bg-info': one.status == 0, 'bg-success': one.status == 1}">
+									{{one.status == 0 ? 'auto' : 'manual'}}</p>
 							</td>
 							<td>
 								{{one.conf.group}}/{{one.conf.image}}
@@ -109,7 +110,7 @@
 				<td>http request uri</td>
 				<td>
 					<input type="text" ng-model="confOne.liveCheckConf.httpRequestUri" style="width: 200px;" 
-						ui-valid="{{confOne.liveCheckConf.isHttpRequest ? 'r uri' : 'uri'}}" />
+						ui-valid="{{confOne.liveCheckConf.isHttpRequest ? 'r uri' : 'uri'}}" placeholder="/metrics" />
 				</td>
 			</tr>	
 			<tr ng-show="confOne.liveCheckConf.isHttpRequest || confOne.liveCheckConf.isPortListen">
@@ -144,6 +145,12 @@
 	<div class="tabs">
 		<table class="table table-bordered table-striped m_top6" style="width: 600px;">
 			<tr>
+				<td>is first instance pull only</td>
+				<td>
+					<input type="checkbox" ng-model="confOne.monitorConf.isFirstInstancePullOnly" />
+				</td>
+			</tr>
+			<tr>
 				<td width="30%">interval seconds</td>
 				<td>
 					<select ng-model="confOne.monitorConf.intervalSeconds" ui-valid="r">
@@ -163,7 +170,7 @@
 				<td>http request uri</td>
 				<td>
 					<input type="text" ng-model="confOne.monitorConf.httpRequestUri" style="width: 200px;" 
-						ui-valid="{{confOne.monitorConf.isHttpRequest ? 'r uri' : 'uri'}}" />
+						ui-valid="{{confOne.monitorConf.isHttpRequest ? 'r uri' : 'uri'}}" placeholder="/metrics" />
 				</td>
 			</tr>	
 			<tr ng-show="confOne.monitorConf.isHttpRequest">

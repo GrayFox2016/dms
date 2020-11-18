@@ -259,6 +259,10 @@ h.post('/api/container/create/tpl') { req, resp ->
     map.conf = app.conf
     map.applications = ContainerMountFileGenerator.prepare(User.Admin, clusterId)
 
+    def appMonitorList = new AppDTO(clusterId: clusterId).
+            queryFields('id,cluster_id,status,monitor_conf').loadList() as List<AppDTO>
+    map.appMonitorList = appMonitorList.findAll { it.autoManage() && it.monitorConf }
+
     def content = CachedGroovyClassLoader.instance.eval(tplOne.content, map)
     resp.end content
 }

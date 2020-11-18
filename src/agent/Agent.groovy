@@ -225,6 +225,10 @@ class Agent extends IntervalJob {
     }
 
     boolean metricGet(int appId, int instanceIndex, Container container, MonitorConf conf) {
+        if (conf.isFirstInstancePullOnly && instanceIndex != 0) {
+            return true
+        }
+
         def decimal = conf.intervalSeconds / interval
         def ceil = Math.ceil(decimal.doubleValue()) as int
         if (intervalCount % ceil != 0) {

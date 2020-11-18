@@ -331,7 +331,9 @@ class CreateProcessor implements GuardianProcessor {
     ContainerRunResult startOneContainer(int clusterId, int appId, int jobId, int instanceIndex,
                                          List<String> nodeIpList, String nodeIp, AppConf conf, JobStepKeeper passedKeeper = null) {
         def registryOne = new ImageRegistryDTO(id: conf.registryId).one() as ImageRegistryDTO
-        assert registryOne
+        if (!registryOne) {
+            throw new JobProcessException('docker image registry not found - ' + conf.registryId)
+        }
         def imageWithTag = registryOne.trimScheme() + '/' + conf.group + '/' + conf.image + ':' + conf.tag
 
         def keeper = passedKeeper ?: new JobStepKeeper(jobId: jobId, instanceIndex: instanceIndex, nodeIp: nodeIp)

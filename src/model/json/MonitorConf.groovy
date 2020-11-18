@@ -35,6 +35,8 @@ class MonitorConf implements JSONFiled {
 
     String metricFormatScriptContent
 
+    Boolean isFirstInstancePullOnly
+
     boolean asBoolean() {
         isHttpRequest || isShellScript
     }
