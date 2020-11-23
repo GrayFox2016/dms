@@ -17,7 +17,7 @@ groovy -cp dist\*:src:resources src/RunServer.groovy
 
 TIPS: By default, dms use h2 database and data file is /var/dms/data*, and DMS will create tables when first run. DDL refer init_h2.sql
 
-### 3. View web ui http://127.0.0.1:5000 and login using any username and password.
+### 3. View web ui http://127.0.0.1:5010/admin/login.html and login using any username and password.
 
 TIPS: By default, dms do not check password, if you want use your login service, you can change ${projectRoot}/src/conf.properties, dms will post user/password as a form to target url
 
@@ -31,9 +31,11 @@ TIPS: DMS use SPI to support user define login service/distributed lock/scale st
 
 ### 4. Update scripts using by node agent to database table.
 
-after login, then open url: http://127.0.0.1:5000/dms/agent/script/update/batch
+after login, then open url: http://127.0.0.1:5010/dms/agent/script/update/batch
 
 ### 5. Create first cluster in web ui.
+
+the first cluster's secret is default 1, it is a http token used by agents, refer conf.properties.
 
 ### Others: Change if you need use another database server.
 
